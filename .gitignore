@@ -1,0 +1,16 @@
+# Python / Node / general
+__pycache__/
+node_modules/
+
+# IDE
+.vscode/
+*.log
+
+# Build / binaries (don't commit Stockfish binary)
+stockfish/
+*.exe
+*.dll
+*.so
+
+# Env files
+.env

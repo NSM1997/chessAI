@@ -16,7 +16,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                         tabs[0].url.includes('/play/') ||
                         tabs[0].url.includes('/game/') ||
                         tabs[0].url.includes('/puzzles/') ||
-                        tabs[0].url.includes('/analysis/')
+                        tabs[0].url.includes('/analysis/') ||
+                        tabs[0].url.includes('/analysis') ||
+                        tabs[0].url.includes('/daily/') ||
+                        tabs[0].url.includes('/daily') ||
+                        tabs[0].url.includes('/live/')
                     );
                     
                     sendResponse({

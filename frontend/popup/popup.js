@@ -391,171 +391,201 @@ class ChessAIPopup {
                 return;
             }
             
-            // Inject comprehensive debug script
+            // Inject debug script that uses our working extractor
             const results = await chrome.scripting.executeScript({
                 target: { tabId: tab.id },
                 func: () => {
                     try {
-                        // Helper function for FEN validation
-                        function isValidChessFEN(fen) {
-                            if (!fen || typeof fen !== 'string') return false;
-                            
-                            const parts = fen.trim().split(' ');
-                            if (parts.length < 2) return false;
-                            
-                            // Check board position (first part)
-                            const boardPart = parts[0];
-                            if (!boardPart.includes('/')) return false;
-                            
-                            // Check if it contains valid chess piece characters
-                            const validChars = 'rnbqkpRNBQKP12345678/';
-                            if (!boardPart.split('').every(c => validChars.includes(c))) return false;
-                            
-                            // Check active color (second part)
-                            const turnPart = parts[1];
-                            if (turnPart !== 'w' && turnPart !== 'b') return false;
-                            
-                            return true;
-                        }
-                        
                         const debugInfo = {
                             url: window.location.href,
-                            foundFens: [],
-                            windowVariables: [],
-                            scriptContent: [],
-                            dataAttributes: []
+                            timestamp: new Date().toISOString(),
+                            boardElements: [],
+                            pieceElements: [],
+                            extractedFen: null,
+                            extractionMethod: null,
+                            errors: []
                         };
-                    
-                    // Check window variables
-                    const possibleVars = [
-                        'window.puzzle', 'window.game', 'window.board', 'window.chess',
-                        'window.chesscom', 'window.puzzleData', 'window.gameData',
-                        'window.position', 'window.fen'
-                    ];
-                    
-                    possibleVars.forEach(varName => {
-                        try {
-                            const obj = eval(varName);
-                            if (obj) {
-                                debugInfo.windowVariables.push({
-                                    name: varName,
-                                    type: typeof obj,
-                                    hasFen: !!obj.fen,
-                                    hasPosition: !!obj.position,
-                                    hasCurrentFen: !!obj.currentFen,
-                                    fenValue: obj.fen || obj.position || obj.currentFen || 'N/A'
+                        
+                        // Check if ChessDOMExtractor is available
+                        if (typeof ChessDOMExtractor !== 'undefined') {
+                            try {
+                                const extractor = new ChessDOMExtractor();
+                                debugInfo.extractedFen = extractor.extractCurrentFEN();
+                                debugInfo.extractionMethod = 'ChessDOMExtractor';
+                            } catch (error) {
+                                debugInfo.errors.push(`ChessDOMExtractor error: ${error.message}`);
+                            }
+                        } else {
+                            debugInfo.errors.push('ChessDOMExtractor not available');
+                        }
+                        
+                        // Check board elements
+                        const boardSelectors = [
+                            'wc-chess-board.board',
+                            'wc-chess-board',
+                            '.board',
+                            '[id*="board"]',
+                            '[class*="board"]'
+                        ];
+                        
+                        boardSelectors.forEach(selector => {
+                            const elements = document.querySelectorAll(selector);
+                            elements.forEach((el, index) => {
+                                const rect = el.getBoundingClientRect();
+                                debugInfo.boardElements.push({
+                                    selector: selector,
+                                    index: index,
+                                    tagName: el.tagName,
+                                    className: el.className,
+                                    id: el.id,
+                                    dimensions: `${rect.width}x${rect.height}`,
+                                    position: `(${rect.left}, ${rect.top})`
                                 });
+                            });
+                        });
+                        
+                        // Check piece elements
+                        const pieceElements = document.querySelectorAll('.piece');
+                        debugInfo.pieceElements = Array.from(pieceElements).slice(0, 10).map((el, index) => {
+                            const classes = Array.from(el.classList);
+                            const rect = el.getBoundingClientRect();
+                            return {
+                                index: index,
+                                classes: classes,
+                                position: `(${rect.left}, ${rect.top})`,
+                                dimensions: `${rect.width}x${rect.height}`
+                            };
+                        });
+                        
+                        // Try direct DOM position extraction as fallback
+                        if (!debugInfo.extractedFen) {
+                            try {
+                                // Use the working DOM position extraction logic
+                                let board = document.querySelector('wc-chess-board.board');
+                                if (!board) {
+                                    board = document.querySelector('wc-chess-board');
+                                }
+                                if (!board) {
+                                    board = document.querySelector('.board');
+                                }
                                 
-                                if (obj.fen || obj.position || obj.currentFen) {
-                                    const fen = obj.fen || obj.position || obj.currentFen;
-                                    if (typeof fen === 'string' && fen.includes('/')) {
-                                        debugInfo.foundFens.push({
-                                            source: varName,
-                                            fen: fen
+                                if (board) {
+                                    const boardRect = board.getBoundingClientRect();
+                                    const pieces = document.querySelectorAll('.piece');
+                                    
+                                    if (pieces.length > 0) {
+                                        const boardArray = Array(8).fill().map(() => Array(8).fill(''));
+                                        const squareWidth = boardRect.width / 8;
+                                        const squareHeight = boardRect.height / 8;
+                                        
+                                        pieces.forEach(piece => {
+                                            const classes = Array.from(piece.classList);
+                                            let pieceType = null;
+                                            for (const cls of classes) {
+                                                if (cls.match(/^[wb][prnbqk]$/)) {
+                                                    pieceType = cls;
+                                                    break;
+                                                }
+                                            }
+                                            
+                                            if (pieceType) {
+                                                const pieceRect = piece.getBoundingClientRect();
+                                                const relativeX = pieceRect.left - boardRect.left;
+                                                const relativeY = pieceRect.top - boardRect.top;
+                                                
+                                                const file = Math.floor(relativeX / squareWidth);
+                                                const rank = Math.floor(relativeY / squareHeight);
+                                                
+                                                if (file >= 0 && file < 8 && rank >= 0 && rank < 8) {
+                                                    const pieceChar = pieceType[0] === 'w' ? pieceType[1].toUpperCase() : pieceType[1].toLowerCase();
+                                                    boardArray[rank][file] = pieceChar;
+                                                }
+                                            }
                                         });
+                                        
+                                        // Convert to FEN
+                                        const fenBoard = boardArray.map(rank => {
+                                            let rankStr = '';
+                                            let emptyCount = 0;
+                                            for (const square of rank) {
+                                                if (square === '') {
+                                                    emptyCount++;
+                                                } else {
+                                                    if (emptyCount > 0) {
+                                                        rankStr += emptyCount;
+                                                        emptyCount = 0;
+                                                    }
+                                                    rankStr += square;
+                                                }
+                                            }
+                                            if (emptyCount > 0) {
+                                                rankStr += emptyCount;
+                                            }
+                                            return rankStr;
+                                        }).join('/');
+                                        
+                                        debugInfo.extractedFen = `${fenBoard} w KQkq - 0 1`;
+                                        debugInfo.extractionMethod = 'Direct DOM positioning';
                                     }
                                 }
-                            }
-                        } catch (e) {
-                            // Variable doesn't exist
-                        }
-                    });
-                    
-                    // Check script tags for FEN patterns
-                    const scripts = document.querySelectorAll('script');
-                    scripts.forEach((script, index) => {
-                        const content = script.textContent || script.innerHTML;
-                        if (content && content.includes('/')) {
-                            const fenMatches = content.match(/["']([rnbqkpRNBQKP1-8\/\s]+)["']/g);
-                            if (fenMatches) {
-                                fenMatches.forEach(match => {
-                                    const potentialFen = match.replace(/["']/g, '').trim();
-                                    if (potentialFen.includes('/') && potentialFen.includes(' ') && 
-                                        (potentialFen.includes('w') || potentialFen.includes('b'))) {
-                                        debugInfo.scriptContent.push({
-                                            scriptIndex: index,
-                                            fen: potentialFen
-                                        });
-                                        debugInfo.foundFens.push({
-                                            source: `script[${index}]`,
-                                            fen: potentialFen
-                                        });
-                                    }
-                                });
+                            } catch (error) {
+                                debugInfo.errors.push(`Direct extraction error: ${error.message}`);
                             }
                         }
-                    });
-                    
-                    // Check data attributes
-                    const allElements = document.querySelectorAll('*');
-                    allElements.forEach((element, index) => {
-                        if (index > 100) return; // Limit search
-                        const attributes = element.attributes;
-                        for (const attr of attributes) {
-                            if (attr.value && attr.value.includes('/') && attr.value.includes(' ')) {
-                                // Validate that this looks like a chess FEN
-                                const potentialFen = attr.value.trim();
-                                if (isValidChessFEN(potentialFen)) {
-                                    debugInfo.dataAttributes.push({
-                                        element: element.tagName,
-                                        attribute: attr.name,
-                                        value: attr.value
-                                    });
-                                    debugInfo.foundFens.push({
-                                        source: `${element.tagName}[${attr.name}]`,
-                                        fen: attr.value
-                                    });
-                                }
-                            }
-                        }
-                    });
-                    
+                        
                         return debugInfo;
+                        
                     } catch (error) {
-                        return {
-                            error: error.message,
-                            url: window.location.href,
-                            foundFens: [],
-                            windowVariables: [],
-                            scriptContent: [],
-                            dataAttributes: []
-                        };
+                        return { error: error.message };
                     }
                 }
             });
             
-            const debugInfo = results[0]?.result;
-            
-            // Check if there was an error in the debug script
-            if (debugInfo && debugInfo.error) {
-                this.showError(`Debug script error: ${debugInfo.error}`);
-                return;
-            }
-            
-            if (debugInfo && debugInfo.foundFens.length > 0) {
-                let message = 'Found FEN strings:\n\n';
-                debugInfo.foundFens.forEach((fen, index) => {
-                    message += `${index + 1}. ${fen.source}: ${fen.fen}\n`;
+            if (results && results[0] && results[0].result) {
+                const debugInfo = results[0].result;
+                
+                if (debugInfo.error) {
+                    this.showError(`Debug script error: ${debugInfo.error}`);
+                    return;
+                }
+                
+                // Display debug information
+                let message = `🔍 FEN Extraction Debug Results:\n\n`;
+                message += `📍 URL: ${debugInfo.url}\n`;
+                message += `⏰ Time: ${debugInfo.timestamp}\n\n`;
+                
+                if (debugInfo.extractedFen) {
+                    message += `✅ SUCCESS: FEN extracted using ${debugInfo.extractionMethod}\n`;
+                    message += `🎯 FEN: ${debugInfo.extractedFen}\n\n`;
+                    
+                    // Auto-fill the extracted FEN
+                    if (this.manualFenInput) {
+                        this.manualFenInput.value = debugInfo.extractedFen;
+                    }
+                } else {
+                    message += `❌ FAILED: No FEN extracted\n\n`;
+                }
+                
+                message += `🏗️ Board Elements Found: ${debugInfo.boardElements.length}\n`;
+                debugInfo.boardElements.slice(0, 3).forEach((board, index) => {
+                    message += `  ${index + 1}. ${board.selector} - ${board.dimensions} at ${board.position}\n`;
                 });
                 
-                // Auto-fill the first valid FEN
-                if (debugInfo.foundFens.length > 0) {
-                    this.manualFenInput.value = debugInfo.foundFens[0].fen;
+                message += `\n♟️ Piece Elements Found: ${debugInfo.pieceElements.length}\n`;
+                debugInfo.pieceElements.slice(0, 5).forEach((piece, index) => {
+                    message += `  ${index + 1}. ${piece.classes.join(' ')} at ${piece.position}\n`;
+                });
+                
+                if (debugInfo.errors.length > 0) {
+                    message += `\n⚠️ Errors:\n`;
+                    debugInfo.errors.forEach(error => {
+                        message += `  • ${error}\n`;
+                    });
                 }
                 
-                this.showMessage(message, 'success');
+                this.showMessage(message, debugInfo.extractedFen ? 'success' : 'error');
             } else {
-                let message = 'No FEN strings found. Debug info:\n\n';
-                if (debugInfo) {
-                    message += `Window variables checked: ${debugInfo.windowVariables?.length || 0}\n`;
-                    message += `Scripts checked: ${debugInfo.scriptContent?.length || 0}\n`;
-                    message += `Data attributes checked: ${debugInfo.dataAttributes?.length || 0}\n\n`;
-                } else {
-                    message += 'Debug script failed to execute properly.\n\n';
-                }
-                message += 'Try using Method 1 or 2 from the instructions.';
-                
-                this.showMessage(message, 'error');
+                this.showError('Debug failed: No results returned');
             }
             
         } catch (error) {

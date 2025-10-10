@@ -17,13 +17,17 @@ class ChessDOMExtractor {
             '/game/',
             '/puzzles/',
             '/analysis/',
+            '/analysis',
             '/live/',
-            '/daily/'
+            '/daily/',
+            '/daily'
         ];
         
         const isValidUrl = validContexts.some(context => pathname.includes(context));
         // Try multiple selectors to find the board
         const boardSelectors = [
+            'wc-chess-board.board',
+            'wc-chess-board',
             '.board',
             '#board-vs-personalities-board',
             '[id*="board-"]',
@@ -31,6 +35,10 @@ class ChessDOMExtractor {
             '.puzzle-board',
             '[class*="board"]',
             '[class*="chess"]',
+            '.game-board',
+            '#game-board',
+            '.board-layout-main',
+            '.board-layout-chessboard',
             'canvas',
             'svg'
         ];
@@ -46,23 +54,31 @@ class ChessDOMExtractor {
         }
         
         // For puzzle pages, we don't need all game UI elements
-        const isPuzzlePage = pathname.includes('/puzzles/');
+        const isPuzzlePage = pathname.includes('/puzzles/') || pathname.includes('/daily/') || pathname.includes('/daily');
+        const isAnalysisPage = pathname.includes('/analysis/') || pathname.includes('/analysis');
+        const isGamePage = pathname.includes('/game/') || pathname.includes('/play/') || pathname.includes('/live/');
         let hasGameUI = false;
         
         if (isPuzzlePage) {
             // For puzzles, just check for puzzle-specific elements
-            hasGameUI = document.querySelector('.puzzle-controls, .puzzle-info, .instructions, .puzzle-details, .puzzle-ui, [class*="puzzle"]');
-        } else {
+            hasGameUI = document.querySelector('.puzzle-controls, .puzzle-info, .instructions, .puzzle-details, .puzzle-ui, [class*="puzzle"], .daily-puzzle, [class*="daily"]');
+        } else if (isAnalysisPage) {
+            // For analysis pages, check for analysis-specific elements
+            hasGameUI = document.querySelector('.analysis-controls, .analysis-info, [class*="analysis"], .move-list, .pgn-editor');
+        } else if (isGamePage) {
             // For games, check for standard game UI elements
             hasGameUI = document.querySelector('.clock, .player-info, .move-list, .game-controls');
+        } else {
+            // For other pages, check for any chess-related UI
+            hasGameUI = document.querySelector('.clock, .player-info, .move-list, .game-controls, .analysis-controls, .puzzle-controls');
         }
         
-        // If we have a valid URL and board, and either game UI or it's a puzzle page, it's valid
-        let isValid = isValidUrl && hasActiveBoard && (hasGameUI || isPuzzlePage);
+        // If we have a valid URL and board, and either game UI or it's a special page, it's valid
+        let isValid = isValidUrl && hasActiveBoard && (hasGameUI || isPuzzlePage || isAnalysisPage || isGamePage);
         
-        // For puzzle pages, be even more permissive - if we're on a puzzle URL, allow it
-        if (!isValid && isPuzzlePage && isValidUrl) {
-            console.log('[Chess AI] Puzzle page detected, allowing context even without board detection');
+        // For special pages, be even more permissive - if we're on a valid URL, allow it
+        if (!isValid && (isPuzzlePage || isAnalysisPage || isGamePage) && isValidUrl) {
+            console.log('[Chess AI] Special page detected, allowing context even without board detection');
             isValid = true;
         }
         
@@ -76,21 +92,324 @@ class ChessDOMExtractor {
         return isValid;
     }
 
-    detectCurrentTurn() {
+    detectBoardOrientation() {
         try {
-            const whiteActive = document.querySelector('.clock-player-turn.clock-white, .player-white.player-turn, [class*="white"][class*="turn"]');
-            const blackActive = document.querySelector('.clock-player-turn.clock-black, .player-black.player-turn, [class*="black"][class*="turn"]');
+            console.log('[Chess AI] Detecting board orientation...');
             
-            if (whiteActive && !blackActive) return 'w';
-            if (blackActive && !whiteActive) return 'b';
-            
-            const puzzleText = document.querySelector('.puzzle-info, .instructions, .puzzle-details');
-            if (puzzleText) {
-                const text = puzzleText.textContent.toLowerCase();
-                if (text.includes('white to move') || text.includes('white to play')) return 'w';
-                if (text.includes('black to move') || text.includes('black to play')) return 'b';
+            // Method 1: Check for board flip indicators in CSS classes
+            const boardElement = document.querySelector('wc-chess-board.board, wc-chess-board, .board');
+            if (boardElement) {
+                const classes = Array.from(boardElement.classList);
+                console.log('[Chess AI] Board classes:', classes);
+                
+                if (classes.some(cls => cls.includes('flipped') || cls.includes('black-perspective') || cls.includes('black-view'))) {
+                    console.log('[Chess AI] Board orientation: Flipped (from CSS classes)');
+                    return true;
+                }
             }
             
+            // Method 2: Check for player perspective indicators
+            const playerElements = document.querySelectorAll('.player-info, .player-name, [class*="player"]');
+            for (const element of playerElements) {
+                const text = element.textContent.toLowerCase();
+                const classes = Array.from(element.classList);
+                
+                // Look for indicators that user is playing as Black
+                if (text.includes('you are black') || text.includes('playing as black') || 
+                    classes.some(cls => cls.includes('black-player') || cls.includes('player-black'))) {
+                    console.log('[Chess AI] Board orientation: Flipped (user playing as Black)');
+                    return true;
+                }
+            }
+            
+            // Method 3: Enhanced piece position analysis
+            const pieces = document.querySelectorAll('.piece, [class*="piece"]');
+            if (pieces.length > 0) {
+                let whitePiecesInTopHalf = 0;
+                let whitePiecesInBottomHalf = 0;
+                let blackPiecesInTopHalf = 0;
+                let blackPiecesInBottomHalf = 0;
+                
+                const boardElement = document.querySelector('wc-chess-board.board, wc-chess-board, .board');
+                if (boardElement) {
+                    const boardRect = boardElement.getBoundingClientRect();
+                    const boardHeight = boardRect.height;
+                    const boardWidth = boardRect.width;
+                    
+                    pieces.forEach(piece => {
+                        const classes = Array.from(piece.classList);
+                        const pieceRect = piece.getBoundingClientRect();
+                        
+                        // Calculate relative position within the board
+                        const relativeY = pieceRect.top - boardRect.top;
+                        const relativeX = pieceRect.left - boardRect.left;
+                        
+                        // Check if piece is in top or bottom half
+                        const isInTopHalf = relativeY < boardHeight / 2;
+                        const isInLeftHalf = relativeX < boardWidth / 2;
+                        
+                        // Check piece color
+                        if (classes.some(cls => cls.match(/^w[prnbqk]$/))) {
+                            if (isInTopHalf) whitePiecesInTopHalf++;
+                            else whitePiecesInBottomHalf++;
+                        } else if (classes.some(cls => cls.match(/^b[prnbqk]$/))) {
+                            if (isInTopHalf) blackPiecesInTopHalf++;
+                            else blackPiecesInBottomHalf++;
+                        }
+                    });
+                    
+                    console.log(`[Chess AI] Piece distribution: White(${whitePiecesInTopHalf}↑, ${whitePiecesInBottomHalf}↓), Black(${blackPiecesInTopHalf}↑, ${blackPiecesInBottomHalf}↓)`);
+                    
+                    // In a normal board: White pieces should be in bottom half (ranks 1-2)
+                    // In a flipped board: White pieces should be in top half (ranks 7-8)
+                    if (whitePiecesInTopHalf > whitePiecesInBottomHalf && whitePiecesInTopHalf > 0) {
+                        console.log('[Chess AI] Board orientation: Flipped (white pieces predominantly in top half)');
+                        return true;
+                    } else if (whitePiecesInBottomHalf > whitePiecesInTopHalf && whitePiecesInBottomHalf > 0) {
+                        console.log('[Chess AI] Board orientation: Normal (white pieces predominantly in bottom half)');
+                        return false;
+                    }
+                }
+            }
+            
+            // Method 4: Check for game state indicators
+            const gameStateElements = document.querySelectorAll('.game-info, .game-status, [class*="game"]');
+            for (const element of gameStateElements) {
+                const text = element.textContent.toLowerCase();
+                if (text.includes('black to move') || text.includes('black\'s turn')) {
+                    // This might indicate user is playing as Black
+                    console.log('[Chess AI] Board orientation: Possibly flipped (Black to move)');
+                    return true;
+                }
+            }
+            
+            // Method 5: Check URL patterns for game type
+            const url = window.location.href;
+            if (url.includes('/game/') || url.includes('/play/')) {
+                // For live games, try to detect if user is playing as Black
+                const gameInfo = document.querySelector('.game-info, .game-header, [class*="game"]');
+                if (gameInfo) {
+                    const gameText = gameInfo.textContent.toLowerCase();
+                    if (gameText.includes('you are black') || gameText.includes('playing as black')) {
+                        console.log('[Chess AI] Board orientation: Flipped (detected from game info)');
+                        return true;
+                    }
+                }
+            }
+            
+            console.log('[Chess AI] Board orientation: Normal (default)');
+            return false;
+            
+        } catch (error) {
+            console.log('[Chess AI] Board orientation detection failed:', error);
+            return false; // Default to normal orientation
+        }
+    }
+
+    detectCurrentTurn() {
+        try {
+            // Method 1: Check for turn indicators in clocks and player info
+            const whiteActive = document.querySelector('.clock-player-turn.clock-white, .player-white.player-turn, [class*="white"][class*="turn"], .player-turn-white, .turn-white');
+            const blackActive = document.querySelector('.clock-player-turn.clock-black, .player-black.player-turn, [class*="black"][class*="turn"], .player-turn-black, .turn-black');
+            
+            if (whiteActive && !blackActive) {
+                console.log('[Chess AI] Turn detected: White (from turn indicators)');
+                return 'w';
+            }
+            if (blackActive && !whiteActive) {
+                console.log('[Chess AI] Turn detected: Black (from turn indicators)');
+                return 'b';
+            }
+            
+            // Method 2: Check puzzle/analysis text content
+            const textElements = document.querySelectorAll('.puzzle-info, .instructions, .puzzle-details, .analysis-info, [class*="turn"], [class*="move"], .move-list, .moves, [class*="analysis"]');
+            for (const element of textElements) {
+                const text = element.textContent.toLowerCase();
+                if (text.includes('white to move') || text.includes('white to play') || text.includes('white\'s turn')) {
+                    console.log('[Chess AI] Turn detected: White (from text content)');
+                    return 'w';
+                }
+                if (text.includes('black to move') || text.includes('black to play') || text.includes('black\'s turn')) {
+                    console.log('[Chess AI] Turn detected: Black (from text content)');
+                    return 'b';
+                }
+            }
+            
+            // Method 2.5: Check for analysis board turn indicators
+            const analysisTurnElements = document.querySelectorAll('.analysis-turn, .board-turn, [class*="turn-indicator"], [class*="current-turn"]');
+            for (const element of analysisTurnElements) {
+                const text = element.textContent.toLowerCase();
+                const classes = Array.from(element.classList);
+                
+                if (text.includes('white') || classes.some(cls => cls.includes('white'))) {
+                    console.log('[Chess AI] Turn detected: White (from analysis turn indicator)');
+                    return 'w';
+                }
+                if (text.includes('black') || classes.some(cls => cls.includes('black'))) {
+                    console.log('[Chess AI] Turn detected: Black (from analysis turn indicator)');
+                    return 'b';
+                }
+            }
+            
+            // Method 3: Check for active/highlighted player elements
+            const activePlayer = document.querySelector('.player-active, .player-current, .active-player, [class*="active"][class*="player"]');
+            if (activePlayer) {
+                const classes = Array.from(activePlayer.classList);
+                if (classes.some(cls => cls.includes('white'))) {
+                    console.log('[Chess AI] Turn detected: White (from active player)');
+                    return 'w';
+                }
+                if (classes.some(cls => cls.includes('black'))) {
+                    console.log('[Chess AI] Turn detected: Black (from active player)');
+                    return 'b';
+                }
+            }
+            
+            // Method 4: Check move list for last move color
+            const lastMove = document.querySelector('.move-list .move:last-child, .moves .move:last-child, [class*="move"]:last-child');
+            if (lastMove) {
+                const classes = Array.from(lastMove.classList);
+                if (classes.some(cls => cls.includes('white'))) {
+                    console.log('[Chess AI] Turn detected: Black (last move was white)');
+                    return 'b';
+                }
+                if (classes.some(cls => cls.includes('black'))) {
+                    console.log('[Chess AI] Turn detected: White (last move was black)');
+                    return 'w';
+                }
+            }
+            
+            // Method 5: Use a different approach for analysis boards
+            // Instead of counting moves, try to detect from the board's visual state
+            const boardElement = document.querySelector('wc-chess-board.board, wc-chess-board, .board');
+            if (boardElement) {
+                // Check for any visual indicators of whose turn it is
+                const boardClasses = Array.from(boardElement.classList);
+                const boardStyle = window.getComputedStyle(boardElement);
+                
+                // Look for turn-related classes or styles
+                if (boardClasses.some(cls => cls.includes('white-turn') || cls.includes('white-to-move'))) {
+                    console.log('[Chess AI] Turn detected: White (from board classes)');
+                    return 'w';
+                }
+                if (boardClasses.some(cls => cls.includes('black-turn') || cls.includes('black-to-move'))) {
+                    console.log('[Chess AI] Turn detected: Black (from board classes)');
+                    return 'b';
+                }
+                
+                // Check for any data attributes that might indicate turn
+                const turnAttr = boardElement.getAttribute('data-turn') || 
+                               boardElement.getAttribute('data-active-color') ||
+                               boardElement.getAttribute('data-current-player') ||
+                               boardElement.getAttribute('data-to-move');
+                
+                if (turnAttr) {
+                    const turn = turnAttr.toLowerCase().includes('black') || turnAttr === 'b' ? 'b' : 'w';
+                    console.log(`[Chess AI] Turn detected: ${turn === 'w' ? 'White' : 'Black'} (from board attribute: ${turnAttr})`);
+                    return turn;
+                }
+            }
+            
+            // Method 6: Check for highlighted/selected squares (analysis board specific)
+            const highlightedSquares = document.querySelectorAll('[class*="highlight"], [class*="selected"], [class*="active"]');
+            for (const square of highlightedSquares) {
+                const classes = Array.from(square.classList);
+                const text = square.textContent.toLowerCase();
+                
+                if (classes.some(cls => cls.includes('white')) || text.includes('white')) {
+                    console.log('[Chess AI] Turn detected: White (from highlighted square)');
+                    return 'w';
+                }
+                if (classes.some(cls => cls.includes('black')) || text.includes('black')) {
+                    console.log('[Chess AI] Turn detected: Black (from highlighted square)');
+                    return 'b';
+                }
+            }
+            
+            // Method 7: Try to detect turn from the board's internal JavaScript state
+            try {
+                // Check if the board element has any internal properties
+                const boardElement = document.querySelector('wc-chess-board.board, wc-chess-board, .board');
+                if (boardElement) {
+                    // Try to access internal properties (this might work for some chess board implementations)
+                    const possibleProps = ['turn', 'activeColor', 'currentPlayer', 'toMove', 'sideToMove'];
+                    
+                    for (const prop of possibleProps) {
+                        if (boardElement[prop] !== undefined) {
+                            const value = boardElement[prop];
+                            const turn = (value === 'black' || value === 'b' || value === 1) ? 'b' : 'w';
+                            console.log(`[Chess AI] Turn detected: ${turn === 'w' ? 'White' : 'Black'} (from board.${prop}: ${value})`);
+                            return turn;
+                        }
+                    }
+                    
+                    // Try to access shadow DOM or internal state
+                    if (boardElement.shadowRoot) {
+                        const shadowContent = boardElement.shadowRoot.textContent || boardElement.shadowRoot.innerHTML;
+                        if (shadowContent.includes('white to move') || shadowContent.includes('white\'s turn')) {
+                            console.log('[Chess AI] Turn detected: White (from shadow DOM)');
+                            return 'w';
+                        }
+                        if (shadowContent.includes('black to move') || shadowContent.includes('black\'s turn')) {
+                            console.log('[Chess AI] Turn detected: Black (from shadow DOM)');
+                            return 'b';
+                        }
+                    }
+                }
+                
+                // Check for any global chess state variables
+                const globalChessVars = ['chessBoard', 'gameBoard', 'analysisBoard', 'currentBoard'];
+                for (const varName of globalChessVars) {
+                    if (window[varName] && window[varName].turn !== undefined) {
+                        const value = window[varName].turn;
+                        const turn = (value === 'black' || value === 'b' || value === 1) ? 'b' : 'w';
+                        console.log(`[Chess AI] Turn detected: ${turn === 'w' ? 'White' : 'Black'} (from window.${varName}.turn: ${value})`);
+                        return turn;
+                    }
+                }
+                
+            } catch (error) {
+                console.log('[Chess AI] Board state analysis failed:', error);
+            }
+            
+            // Method 8: Fallback - use a simple heuristic based on position analysis
+            // This is a last resort when all other methods fail
+            try {
+                const pieces = document.querySelectorAll('.piece, [class*="piece"]');
+                if (pieces.length > 0) {
+                    // Count pieces to get a rough idea of the position
+                    let whitePieces = 0;
+                    let blackPieces = 0;
+                    
+                    pieces.forEach(piece => {
+                        const classes = Array.from(piece.classList);
+                        for (const cls of classes) {
+                            if (cls.match(/^w[prnbqk]$/)) {
+                                whitePieces++;
+                                break;
+                            } else if (cls.match(/^b[prnbqk]$/)) {
+                                blackPieces++;
+                                break;
+                            }
+                        }
+                    });
+                    
+                    // Simple heuristic: if we have a reasonable number of pieces, 
+                    // assume it's a normal position and default to white
+                    // If it looks like an endgame, try to be more careful
+                    if (whitePieces + blackPieces >= 16) {
+                        console.log('[Chess AI] Turn detection: Defaulting to White (normal position, no clear indicator)');
+                        return 'w';
+                    } else {
+                        console.log('[Chess AI] Turn detection: Defaulting to White (endgame position, no clear indicator)');
+                        return 'w';
+                    }
+                }
+            } catch (error) {
+                console.log('[Chess AI] Fallback analysis failed:', error);
+            }
+            
+            console.log('[Chess AI] Turn detection: Defaulting to White (no clear indicator found)');
             return 'w';
         } catch (error) {
             console.log('[Chess AI] Turn detection failed:', error);
@@ -169,8 +488,20 @@ class ChessDOMExtractor {
             console.log(`[Chess AI] Board element: ${board.tagName} with class "${board.className}"`);
             console.log(`[Chess AI] Board dimensions: ${boardRect.width}x${boardRect.height} at (${boardRect.left}, ${boardRect.top})`);
 
-            // Find all pieces
-            const pieces = document.querySelectorAll('.piece');
+            // Find all pieces - use specific selectors to avoid false positives
+            let pieces = document.querySelectorAll(
+                '.piece[class*="wp"], .piece[class*="bp"], .piece[class*="wr"], .piece[class*="br"], ' +
+                '.piece[class*="wn"], .piece[class*="bn"], .piece[class*="wb"], .piece[class*="bb"], ' +
+                '.piece[class*="wq"], .piece[class*="bq"], .piece[class*="wk"], .piece[class*="bk"]'
+            );
+            
+            // Fallback to broader selectors if specific ones don't work
+            if (pieces.length === 0) {
+                pieces = document.querySelectorAll('.piece');
+            }
+            if (pieces.length === 0) {
+                pieces = document.querySelectorAll('[class*="piece"], .chess-piece, [class*="chess-piece"]');
+            }
             console.log(`[Chess AI] Found ${pieces.length} pieces`);
 
             if (pieces.length === 0) {
@@ -242,14 +573,36 @@ class ChessDOMExtractor {
 
                     // Ensure coordinates are within bounds
                     if (file >= 0 && file < 8 && rank >= 0 && rank < 8) {
-                        // Convert to FEN coordinates (rank 0 = rank 8 in FEN)
-                        const fenRank = rank; // FEN ranks go from 8 to 1
-                        const fenFile = file;     // FEN files go from a to h
+                        // Detect board orientation based on user's perspective
+                        // Check for manual override first (for testing)
+                        let isBoardFlipped = window.chessAIManualOrientation;
+                        if (isBoardFlipped === undefined) {
+                            isBoardFlipped = this.detectBoardOrientation();
+                        } else {
+                            console.log(`[Chess AI] Using manual board orientation: ${isBoardFlipped ? 'Flipped' : 'Normal'}`);
+                        }
+                        
+                        let fenRank, fenFile;
+                        
+                        // Coordinate mapping based on board orientation
+                        // DOM coordinates: 0,0 = top-left, 7,7 = bottom-right
+                        // FEN coordinates: 0,0 = a8 (top-left), 7,7 = h1 (bottom-right)
+                        
+                        if (isBoardFlipped) {
+                            // For flipped boards (Chess.com's "flipped" class), we need to invert both coordinates
+                            // This produces the correct FEN for a visually standard board
+                            fenRank = 7 - rank; // Invert rank coordinates
+                            fenFile = 7 - file; // Invert file coordinates
+                        } else {
+                            // For normal boards, use standard mapping
+                            fenRank = 7 - rank; // Invert rank coordinates
+                            fenFile = file;     // Direct file mapping
+                        }
 
                         // Convert piece notation (wp -> P, bp -> p, etc.)
                         const pieceChar = pieceType[0] === 'w' ? pieceType[1].toUpperCase() : pieceType[1].toLowerCase();
                         boardArray[fenRank][fenFile] = pieceChar;
-                        console.log(`[Chess AI] Placed ${pieceChar} at file ${file}, rank ${rank} (FEN: ${String.fromCharCode(97 + fenFile)}${8 - fenRank})`);
+                        console.log(`[Chess AI] Placed ${pieceChar} at file ${file}, rank ${rank} (FEN: ${String.fromCharCode(97 + fenFile)}${8 - fenRank}) [${isBoardFlipped ? 'flipped' : 'normal'} board]`);
                     } else {
                         console.log(`[Chess AI] Piece ${pieceType} at invalid coordinates: file ${file}, rank ${rank}`, 'warn');
                     }
@@ -277,15 +630,47 @@ class ChessDOMExtractor {
                 return rankStr;
             }).join('/');
 
-            // Try to infer active color (turn)
-            let activeColor = 'w'; // Default to white
-            const turnIndicator = document.querySelector('.puzzle-turn-indicator, .player-turn-bottom, .player-turn-top');
-            if (turnIndicator) {
-                if (turnIndicator.classList.contains('player-turn-bottom') || turnIndicator.classList.contains('player-turn-white')) {
-                    activeColor = 'w';
-                } else if (turnIndicator.classList.contains('player-turn-top') || turnIndicator.classList.contains('player-turn-black')) {
-                    activeColor = 'b';
+            // Use enhanced turn detection
+            let activeColor = this.detectCurrentTurn();
+            console.log(`[Chess AI] Detected turn: ${activeColor === 'w' ? 'White' : 'Black'}`);
+            
+            // Method 8: Try to extract turn from the board's internal state
+            // This is the most reliable method for analysis boards
+            try {
+                // Check if the board element has any data attributes or properties that indicate turn
+                const boardElement = document.querySelector('wc-chess-board.board, wc-chess-board, .board');
+                if (boardElement) {
+                    // Check for data attributes
+                    const turnData = boardElement.getAttribute('data-turn') || 
+                                   boardElement.getAttribute('data-active-color') ||
+                                   boardElement.getAttribute('data-current-player');
+                    
+                    if (turnData) {
+                        const turn = turnData.toLowerCase().includes('black') || turnData === 'b' ? 'b' : 'w';
+                        console.log(`[Chess AI] Turn detected: ${turn === 'w' ? 'White' : 'Black'} (from board data attribute: ${turnData})`);
+                        activeColor = turn;
+                    }
+                    
+                    // Check for any JavaScript properties (if accessible)
+                    if (boardElement._turn !== undefined) {
+                        const turn = boardElement._turn === 'black' || boardElement._turn === 'b' ? 'b' : 'w';
+                        console.log(`[Chess AI] Turn detected: ${turn === 'w' ? 'White' : 'Black'} (from board property: ${boardElement._turn})`);
+                        activeColor = turn;
+                    }
                 }
+                
+                // Check window variables for turn information
+                if (window.chesscom && window.chesscom.board) {
+                    const boardState = window.chesscom.board;
+                    if (boardState.turn !== undefined) {
+                        const turn = boardState.turn === 'black' || boardState.turn === 'b' ? 'b' : 'w';
+                        console.log(`[Chess AI] Turn detected: ${turn === 'w' ? 'White' : 'Black'} (from window.chesscom.board.turn: ${boardState.turn})`);
+                        activeColor = turn;
+                    }
+                }
+                
+            } catch (error) {
+                console.log('[Chess AI] Board state analysis failed:', error);
             }
 
             // For puzzles, use default values for other FEN components

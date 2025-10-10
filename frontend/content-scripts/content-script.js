@@ -44,11 +44,34 @@ class ChessAIOverlay {
     }
     
     init() {
-        if (!this.shouldBeActive()) {
-            console.log('[Chess AI] Not activating on this page');
+        // Try to activate immediately
+        if (this.shouldBeActive()) {
+            this.activate();
             return;
         }
         
+        // If not active, wait for page to load and try again
+        console.log('[Chess AI] Page not ready, waiting for load...');
+        
+        // Try again after a short delay
+        setTimeout(() => {
+            if (this.shouldBeActive()) {
+                this.activate();
+            } else {
+                console.log('[Chess AI] Still not ready, trying one more time...');
+                // Try one more time after a longer delay
+                setTimeout(() => {
+                    if (this.shouldBeActive()) {
+                        this.activate();
+                    } else {
+                        console.log('[Chess AI] Not activating on this page after retries');
+                    }
+                }, 2000);
+            }
+        }, 1000);
+    }
+    
+    activate() {
         this.createOverlay();
         this.startPositionMonitoring();
         this.isActive = true;
@@ -64,20 +87,60 @@ class ChessAIOverlay {
     
     shouldBeActive() {
         const pathname = window.location.pathname;
-        const validPaths = ['/play/', '/game/', '/puzzles/', '/analysis/', '/live/', '/daily/'];
+        const validPaths = ['/play/', '/game/', '/puzzles/', '/analysis/', '/live/', '/daily/', '/daily', '/analysis'];
         
         const validUrl = window.location.hostname.includes('chess.com') && 
                          validPaths.some(path => pathname.includes(path));
         
-        const hasBoard = document.querySelector('.board, #board-vs-personalities-board, [id*="board-"]');
+        // Try multiple board selectors
+        const boardSelectors = [
+            'wc-chess-board.board',
+            'wc-chess-board',
+            '.board',
+            '#board-vs-personalities-board',
+            '[id*="board-"]',
+            '.chess-board',
+            '.puzzle-board',
+            '[class*="board"]',
+            '[class*="chess"]',
+            '.game-board',
+            '#game-board',
+            '.board-layout-main',
+            '.board-layout-chessboard',
+            'canvas',
+            'svg'
+        ];
+        
+        let hasBoard = false;
+        let foundBoard = null;
+        
+        for (const selector of boardSelectors) {
+            const element = document.querySelector(selector);
+            if (element) {
+                hasBoard = true;
+                foundBoard = element;
+                console.log('[Chess AI] Found board with selector:', selector);
+                break;
+            }
+        }
+        
+        // For special pages, also check for pieces as a fallback
+        if (!hasBoard && (pathname.includes('/daily/') || pathname.includes('/daily') || pathname.includes('/game/') || pathname.includes('/analysis'))) {
+            const pieces = document.querySelectorAll('.piece, [class*="piece"], .chess-piece, [class*="chess-piece"]');
+            if (pieces.length > 0) {
+                hasBoard = true;
+                console.log('[Chess AI] Found pieces on special page:', pieces.length);
+            }
+        }
         
         // Debug logging
         console.log('[Chess AI] shouldBeActive check:', {
             hostname: window.location.hostname,
             pathname: pathname,
             validUrl: validUrl,
-            hasBoard: !!hasBoard,
-            boardElement: hasBoard ? hasBoard.className : 'none'
+            hasBoard: hasBoard,
+            boardElement: foundBoard ? `${foundBoard.tagName}.${foundBoard.className}` : 'none',
+            pieceCount: document.querySelectorAll('.piece').length
         });
         
         return validUrl && hasBoard;

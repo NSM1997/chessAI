@@ -103,6 +103,36 @@ async def analyze_position(request: dict):
         # Create board from FEN
         board = chess.Board(fen)
         
+        # Try to use Stockfish for better analysis
+        stockfish_analysis = None
+        try:
+            # Import the chess engine service
+            import sys
+            import os
+            sys.path.append(os.path.join(os.path.dirname(__file__), 'backend'))
+            
+            from app.services.chess_engine import get_chess_engine
+            import asyncio
+            
+            # Get chess engine service
+            engine_service = asyncio.run(get_chess_engine())
+            
+            # Initialize if not already done
+            if not engine_service.is_initialized:
+                print("Initializing Stockfish engine...")
+                asyncio.run(engine_service.initialize())
+            
+            if engine_service.is_initialized:
+                print("Using Stockfish for analysis...")
+                stockfish_analysis = asyncio.run(engine_service.analyze_position(fen, depth=15))
+                print(f"Stockfish analysis: {stockfish_analysis}")
+            else:
+                print("Stockfish not available, using fallback analysis")
+                
+        except Exception as e:
+            print(f"Stockfish analysis failed: {e}, using fallback")
+            stockfish_analysis = None
+        
         # Basic position analysis
         material_balance = 0
         piece_values = {chess.PAWN: 1, chess.KNIGHT: 3, chess.BISHOP: 3, chess.ROOK: 5, chess.QUEEN: 9}

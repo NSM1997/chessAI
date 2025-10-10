@@ -3,11 +3,11 @@ fastapi==0.104.1
 uvicorn[standard]==0.24.0
 python-multipart==0.0.6
 pydantic==2.4.0
+pydantic-settings==2.0.3
 python-dotenv==1.0.0
 
-# Chess libraries
+# Chess libraries (use only python-chess, remove chess package to avoid conflicts)
 python-chess==1.999
-chess==1.10.0
 
 # Data processing
 pandas==2.1.2

@@ -1,26 +1,42 @@
 /**
- * Chess AI Content Script - Real Position Analysis
- * FINAL VERSION with stable position detection
+ * Chess AI Content Script - Clean Working Version
  */
-
 class ChessAIOverlay {
     constructor() {
-        this.apiBaseUrl = 'http://localhost:8000';
+        // Try to get API URL from storage, fallback to localhost
+        this.apiBaseUrl = 'http://localhost:8001';
         this.overlay = null;
         this.currentFEN = null;
         this.lastUpdateTime = 0;
-        this.analysisCache = new Map();
         this.isAnalyzing = false;
+        this.isActive = false;
+        this.retryCount = 0;
+        this.maxRetries = 3;
+        
+        this.loadConfiguration();
         this.initializeExtractor();
         this.init();
-        
-        console.log('[Chess AI] Chess AI Overlay initialized');
+    }
+    
+    async loadConfiguration() {
+        try {
+            // Try to get API URL from chrome storage
+            if (typeof chrome !== 'undefined' && chrome.storage) {
+                const result = await chrome.storage.sync.get(['apiBaseUrl']);
+                if (result.apiBaseUrl) {
+                    this.apiBaseUrl = result.apiBaseUrl;
+                    console.log('[Chess AI] Using API URL from storage:', this.apiBaseUrl);
+                }
+            }
+        } catch (error) {
+            console.log('[Chess AI] Could not load configuration, using default:', error);
+        }
     }
     
     initializeExtractor() {
         try {
             this.extractor = new ChessDOMExtractor();
-            console.log('[Chess AI] DOM extractor initialized successfully');
+            console.log('[Chess AI] DOM extractor initialized');
         } catch (error) {
             console.error('[Chess AI] Failed to initialize DOM extractor:', error);
             this.extractor = null;
@@ -28,15 +44,43 @@ class ChessAIOverlay {
     }
     
     init() {
+        if (!this.shouldBeActive()) {
+            console.log('[Chess AI] Not activating on this page');
+            return;
+        }
+        
         this.createOverlay();
         this.startPositionMonitoring();
+        this.isActive = true;
         
-        // Add global reference for debugging
         window.chessAI = {
             overlay: this,
             extractor: this.extractor,
             currentFEN: () => this.currentFEN
         };
+        
+        console.log('[Chess AI] Activated');
+    }
+    
+    shouldBeActive() {
+        const pathname = window.location.pathname;
+        const validPaths = ['/play/', '/game/', '/puzzles/', '/analysis/', '/live/', '/daily/'];
+        
+        const validUrl = window.location.hostname.includes('chess.com') && 
+                         validPaths.some(path => pathname.includes(path));
+        
+        const hasBoard = document.querySelector('.board, #board-vs-personalities-board, [id*="board-"]');
+        
+        // Debug logging
+        console.log('[Chess AI] shouldBeActive check:', {
+            hostname: window.location.hostname,
+            pathname: pathname,
+            validUrl: validUrl,
+            hasBoard: !!hasBoard,
+            boardElement: hasBoard ? hasBoard.className : 'none'
+        });
+        
+        return validUrl && hasBoard;
     }
     
     createOverlay() {
@@ -46,7 +90,6 @@ class ChessAIOverlay {
         this.overlay.id = 'chess-ai-overlay';
         this.overlay.innerHTML = `
             <div class="chess-ai-header">
-                <div class="chess-ai-icon">♔</div>
                 <span class="chess-ai-title">Chess AI</span>
                 <button class="chess-ai-close" id="chess-ai-close">×</button>
             </div>
@@ -54,31 +97,25 @@ class ChessAIOverlay {
                 <div class="chess-ai-position">
                     <h3>Position Analysis</h3>
                     <div class="position-info">
-                        <span class="position-type">Loading...</span>
                         <span class="turn-indicator">White to move</span>
-                        <span class="move-number">Move 1</span>
                     </div>
                 </div>
                 
                 <div class="chess-ai-analysis">
-                    <h4>🧠 Analysis for <span class="analysis-color">White</span></h4>
-                    
+                    <h4>Analysis</h4>
                     <div class="best-moves">
-                        <h5>🎯 Best Moves:</h5>
+                        <h5>Best Moves:</h5>
                         <ul class="moves-list">
-                            <li>Loading analysis...</li>
+                            <li>Click Quick Analysis to start</li>
                         </ul>
                     </div>
-                    
                     <div class="explanation">
-                        <h5>💡 Explanation:</h5>
-                        <p class="explanation-text">Analyzing position...</p>
-                        <small class="analysis-perspective">Analysis from White's perspective</small>
+                        <p class="explanation-text">Ready to analyze position...</p>
                     </div>
                 </div>
                 
                 <div class="chess-ai-actions">
-                    <button class="action-btn" id="quick-analysis">⚡ Quick Analysis</button>
+                    <button class="action-btn" id="quick-analysis">Quick Analysis</button>
                 </div>
             </div>
         `;
@@ -86,6 +123,7 @@ class ChessAIOverlay {
         this.addStyles();
         document.body.appendChild(this.overlay);
         this.attachEventListeners();
+        this.hideOverlay();
     }
     
     addStyles() {
@@ -98,50 +136,37 @@ class ChessAIOverlay {
                 position: fixed;
                 top: 20px;
                 right: 20px;
-                width: 350px;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                border-radius: 12px;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                width: 300px;
+                background: #4f46e5;
+                border-radius: 10px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
                 z-index: 10000;
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+                font-family: system-ui, sans-serif;
                 color: white;
-                overflow: hidden;
-                transition: all 0.3s ease;
+                display: none;
             }
             
             .chess-ai-header {
                 display: flex;
+                justify-content: space-between;
                 align-items: center;
-                padding: 12px 16px;
-                background: rgba(255,255,255,0.1);
+                padding: 15px;
                 border-bottom: 1px solid rgba(255,255,255,0.2);
             }
             
-            .chess-ai-icon {
-                font-size: 20px;
-                margin-right: 8px;
-            }
-            
             .chess-ai-title {
-                font-weight: 600;
+                font-weight: bold;
                 font-size: 16px;
-                flex-grow: 1;
             }
             
             .chess-ai-close {
                 background: none;
                 border: none;
                 color: white;
-                font-size: 20px;
+                font-size: 18px;
                 cursor: pointer;
-                padding: 0;
-                width: 24px;
-                height: 24px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border-radius: 50%;
-                transition: background 0.2s;
+                padding: 5px;
+                border-radius: 3px;
             }
             
             .chess-ai-close:hover {
@@ -149,119 +174,59 @@ class ChessAIOverlay {
             }
             
             .chess-ai-content {
-                padding: 16px;
-                max-height: 600px;
-                overflow-y: auto;
+                padding: 15px;
             }
             
-            .chess-ai-position h3 {
-                margin: 0 0 8px 0;
-                font-size: 16px;
-                font-weight: 600;
+            .chess-ai-content h3, .chess-ai-content h4, .chess-ai-content h5 {
+                margin: 0 0 10px 0;
+                font-size: 14px;
             }
             
             .position-info {
-                display: flex;
-                gap: 12px;
-                margin-bottom: 16px;
-                flex-wrap: wrap;
+                margin-bottom: 15px;
             }
             
-            .position-info span {
+            .turn-indicator {
                 background: rgba(255,255,255,0.2);
-                padding: 4px 8px;
-                border-radius: 6px;
+                padding: 5px 10px;
+                border-radius: 5px;
                 font-size: 12px;
-                font-weight: 500;
-            }
-            
-            .chess-ai-analysis h4 {
-                margin: 0 0 12px 0;
-                font-size: 15px;
-                font-weight: 600;
-            }
-            
-            .best-moves h5, .explanation h5 {
-                margin: 0 0 8px 0;
-                font-size: 13px;
-                font-weight: 600;
-                opacity: 0.9;
             }
             
             .moves-list {
                 list-style: none;
                 padding: 0;
-                margin: 0 0 16px 0;
+                margin: 0 0 15px 0;
             }
             
             .moves-list li {
-                background: rgba(255,255,255,0.15);
-                margin: 4px 0;
-                padding: 8px 10px;
-                border-radius: 6px;
+                background: rgba(255,255,255,0.1);
+                margin: 5px 0;
+                padding: 8px;
+                border-radius: 5px;
                 font-size: 13px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-            
-            .move-notation {
-                font-weight: 600;
-                font-family: monospace;
-            }
-            
-            .move-evaluation {
-                opacity: 0.8;
-                font-size: 12px;
             }
             
             .explanation-text {
-                margin: 0 0 8px 0;
+                margin: 0;
                 font-size: 13px;
                 line-height: 1.4;
                 opacity: 0.9;
             }
             
-            .analysis-perspective {
-                opacity: 0.7;
-                font-size: 11px;
-            }
-            
-            .chess-ai-actions {
-                margin-top: 16px;
-                display: flex;
-                gap: 8px;
-            }
-            
             .action-btn {
-                flex: 1;
+                width: 100%;
                 background: rgba(255,255,255,0.2);
                 border: none;
                 color: white;
-                padding: 10px 12px;
-                border-radius: 6px;
+                padding: 10px;
+                border-radius: 5px;
                 font-size: 13px;
-                font-weight: 500;
                 cursor: pointer;
-                transition: all 0.2s;
             }
             
             .action-btn:hover {
                 background: rgba(255,255,255,0.3);
-                transform: translateY(-1px);
-            }
-            
-            .loading {
-                opacity: 0.7;
-            }
-            
-            @keyframes pulse {
-                0%, 100% { opacity: 0.7; }
-                50% { opacity: 1; }
-            }
-            
-            .loading .moves-list li {
-                animation: pulse 1.5s infinite;
             }
         `;
         
@@ -272,224 +237,141 @@ class ChessAIOverlay {
         const closeBtn = this.overlay.querySelector('#chess-ai-close');
         const quickAnalysisBtn = this.overlay.querySelector('#quick-analysis');
         
-        closeBtn?.addEventListener('click', () => this.hideOverlay());
-        quickAnalysisBtn?.addEventListener('click', () => this.quickAnalyze());
+        if (closeBtn) closeBtn.addEventListener('click', () => this.hideOverlay());
+        if (quickAnalysisBtn) quickAnalysisBtn.addEventListener('click', () => this.quickAnalyze());
     }
     
     startPositionMonitoring() {
-        // Check for position changes every 3 seconds (reduced frequency)
-        setInterval(() => this.checkBoardChange(), 3000);
+        if (!this.isActive) return;
         
-        // Initial check
-        setTimeout(() => this.checkBoardChange(), 1000);
+        setInterval(() => this.checkBoardChange(), 5000);
+        setTimeout(() => this.checkBoardChange(), 2000);
     }
     
     checkBoardChange() {
-        console.log('[Chess AI] === CHECKING BOARD CHANGE ===');
+        if (!this.isActive || !this.extractor) {
+            console.log('[Chess AI] Not active or no extractor');
+            return;
+        }
         
-        const newFEN = this.extractor?.extractCurrentFEN();
-        console.log('[Chess AI] Extracted FEN:', newFEN?.substring(0, 50));
+        const newFEN = this.extractor.extractCurrentFEN();
         
-        // Only update if FEN actually changed AND it's been at least 5 seconds
+        console.log('[Chess AI] Board check:', {
+            newFEN: newFEN,
+            currentFEN: this.currentFEN,
+            isActive: this.isActive,
+            hasExtractor: !!this.extractor
+        });
+        
+        if (!newFEN) {
+            console.log('[Chess AI] No FEN extracted, hiding overlay');
+            this.hideOverlay();
+            return;
+        }
+        
         const now = Date.now();
         const timeSinceLastUpdate = now - this.lastUpdateTime;
         
-        const shouldUpdate = newFEN && 
-                           newFEN !== this.currentFEN && 
-                           timeSinceLastUpdate > 5000; // 5 second minimum between updates
-        
-        if (shouldUpdate) {
-            console.log('[Chess AI] Position change detected or forced update');
-            console.log('[Chess AI] Old FEN:', this.currentFEN?.substring(0, 50));
-            console.log('[Chess AI] New FEN:', newFEN?.substring(0, 50));
+        if (newFEN && newFEN !== this.currentFEN && timeSinceLastUpdate > 3000) {
+            console.log('[Chess AI] Position changed:', newFEN);
             
             this.currentFEN = newFEN;
             this.lastUpdateTime = now;
             
             this.updatePositionDisplay();
             this.showOverlay();
-            
-            // Analyze the new position
-            setTimeout(() => this.quickAnalyze(), 100);
-        } else if (newFEN === this.currentFEN) {
-            console.log('[Chess AI] Same position, no update needed');
-        } else {
-            console.log(`[Chess AI] Too soon for update (${timeSinceLastUpdate}ms < 5000ms)`);
         }
     }
     
     updatePositionDisplay() {
         if (!this.currentFEN || !this.overlay) return;
         
-        const positionInfo = this.extractor?.getPositionInfo(this.currentFEN);
-        if (!positionInfo) return;
-        
-        const positionTypeEl = this.overlay.querySelector('.position-type');
+        const positionInfo = this.extractor.getPositionInfo(this.currentFEN);
         const turnIndicatorEl = this.overlay.querySelector('.turn-indicator');
-        const moveNumberEl = this.overlay.querySelector('.move-number');
-        const analysisColorEl = this.overlay.querySelector('.analysis-color');
-        
-        if (positionTypeEl) {
-            const pieceCount = (this.currentFEN.match(/[rnbqkpRNBQKP]/g) || []).length;
-            let positionType = 'Middle Game';
-            if (pieceCount <= 10) positionType = 'Endgame';
-            else if (pieceCount >= 28) positionType = 'Opening';
-            
-            positionTypeEl.textContent = positionType;
-        }
         
         if (turnIndicatorEl) {
-            turnIndicatorEl.textContent = `${positionInfo.toMove} to move`;
-        }
-        
-        if (moveNumberEl) {
-            moveNumberEl.textContent = `Move ${positionInfo.moveNumber}`;
-        }
-        
-        if (analysisColorEl) {
-            analysisColorEl.textContent = positionInfo.toMove;
+            turnIndicatorEl.textContent = positionInfo.toMove + ' to move';
         }
     }
     
     async quickAnalyze() {
-        console.log('[Chess AI] quickAnalyze called');
-        console.log('[Chess AI] isAnalyzing:', this.isAnalyzing);
-        console.log('[Chess AI] currentFEN:', this.currentFEN);
-        
-        if (this.isAnalyzing) {
-            console.log('[Chess AI] Analysis already in progress, skipping');
-            return;
-        }
-        
-        if (!this.currentFEN) {
-            this.showError('No chess position detected');
-            return;
-        }
-        
-        // Check cache first
-        if (this.analysisCache.has(this.currentFEN)) {
-            console.log('[Chess AI] Using cached analysis');
-            const cachedAnalysis = this.analysisCache.get(this.currentFEN);
-            this.displayAnalysis(cachedAnalysis);
-            return;
-        }
+        if (this.isAnalyzing || !this.currentFEN) return;
         
         this.isAnalyzing = true;
-        console.log('[Chess AI] Starting analysis for FEN:', this.currentFEN);
         this.showAnalysisLoading();
         
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
-        
         try {
-            console.log('[Chess AI] Sending API request to:', `${this.apiBaseUrl}/analyze-position`);
-            
-            const response = await fetch(`${this.apiBaseUrl}/analyze-position`, {
+            const response = await fetch(this.apiBaseUrl + '/analyze-position', {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     fen: this.currentFEN,
                     depth: 10,
-                    user_skill_level: 'intermediate'
-                }),
-                signal: controller.signal
+                    user_skill_level: 'intermediate',
+                    explanation_type: 'comprehensive'
+                })
             });
-            
-            clearTimeout(timeoutId);
-            console.log('[Chess AI] Response status:', response.status);
             
             if (!response.ok) {
                 const errorText = await response.text();
-                console.error('[Chess AI] API error response:', response.status, errorText);
-                throw new Error(`API error: ${response.status} - ${errorText}`);
+                throw new Error(`API error ${response.status}: ${errorText}`);
             }
             
             const analysis = await response.json();
-            console.log('[Chess AI] Analysis received:', analysis);
-            
-            // Cache the result
-            this.analysisCache.set(this.currentFEN, analysis);
-            
             this.displayAnalysis(analysis);
+            this.retryCount = 0; // Reset retry count on success
             
         } catch (error) {
-            clearTimeout(timeoutId);
+            console.error('[Chess AI] Analysis error:', error);
             
-            let errorMessage = 'Analysis failed';
-            
-            if (error.name === 'AbortError') {
-                errorMessage = 'Analysis timed out. The position may be too complex.';
-            } else if (error.message && error.message.includes('fetch')) {
-                errorMessage = 'Cannot connect to analysis server. Make sure the backend is running.';
-            } else if (error.message) {
-                errorMessage = error.message;
+            // Retry logic for network errors
+            if (this.retryCount < this.maxRetries && error.message.includes('fetch')) {
+                this.retryCount++;
+                console.log(`[Chess AI] Retrying analysis (${this.retryCount}/${this.maxRetries})`);
+                setTimeout(() => {
+                    this.isAnalyzing = false;
+                    this.quickAnalyze();
+                }, 1000 * this.retryCount);
+                return;
             }
             
-            console.error('[Chess AI] Analysis error:', error);
-            this.showError(`Analysis failed: ${errorMessage}`);
+            this.showError('Analysis failed: ' + error.message);
         } finally {
             this.isAnalyzing = false;
         }
     }
     
     showAnalysisLoading() {
-        if (!this.overlay) return;
-        
         const movesListEl = this.overlay.querySelector('.moves-list');
         const explanationEl = this.overlay.querySelector('.explanation-text');
         
-        if (movesListEl) {
-            movesListEl.innerHTML = `
-                <li><span class="move-notation">Analyzing...</span></li>
-                <li><span class="move-notation">Please wait...</span></li>
-            `;
-        }
-        
-        if (explanationEl) {
-            explanationEl.textContent = 'Analyzing position with chess engine...';
-        }
-        
-        this.overlay.classList.add('loading');
+        if (movesListEl) movesListEl.innerHTML = '<li>Analyzing...</li>';
+        if (explanationEl) explanationEl.textContent = 'Analyzing position...';
     }
     
     displayAnalysis(analysis) {
-        if (!this.overlay || !analysis) return;
-        
-        this.overlay.classList.remove('loading');
-        
         const movesListEl = this.overlay.querySelector('.moves-list');
         const explanationEl = this.overlay.querySelector('.explanation-text');
         
         if (movesListEl && analysis.best_moves) {
-            const movesHTML = analysis.best_moves.slice(0, 3).map(move => `
-                <li>
-                    <span class="move-notation">${move.san}</span>
-                    <span class="move-evaluation">(${move.score?.display || '0.00'})</span>
-                </li>
-            `).join('');
-            
+            const movesHTML = analysis.best_moves.slice(0, 3).map(move => 
+                '<li><strong>' + move.san + '</strong> (' + (move.score?.display || '0.00') + ') - ' + move.move + '</li>'
+            ).join('');
             movesListEl.innerHTML = movesHTML || '<li>No moves available</li>';
         }
         
         if (explanationEl) {
             let explanation = 'Position analyzed successfully.';
+            if (analysis.explanations && analysis.explanations.length > 0) {
+                // Use the first explanation from the API
+                explanation = analysis.explanations[0].explanation;
+            } else if (analysis.best_moves && analysis.best_moves.length > 0) {
+                explanation = 'Best move: ' + analysis.best_moves[0].san + '. Consider piece development and king safety.';
+            }
             
-            if (analysis.best_moves && analysis.best_moves.length > 0) {
-                const bestMove = analysis.best_moves[0];
-                explanation = `Moving ${bestMove.san}. `;
-                
-                if (analysis.evaluation?.position_type) {
-                    explanation += `This is a ${analysis.evaluation.position_type} position. `;
-                }
-                
-                if (analysis.is_endgame) {
-                    explanation += 'Focus on king activity and pawn promotion.';
-                } else {
-                    explanation += 'Consider piece development and king safety.';
-                }
+            // Add learning insights if available
+            if (analysis.learning_insights && analysis.learning_insights.length > 0) {
+                explanation += '\n\nKey insights:\n• ' + analysis.learning_insights.slice(2).join('\n• ');
             }
             
             explanationEl.textContent = explanation;
@@ -497,24 +379,15 @@ class ChessAIOverlay {
     }
     
     showError(message) {
-        if (!this.overlay) return;
-        
         const movesListEl = this.overlay.querySelector('.moves-list');
         const explanationEl = this.overlay.querySelector('.explanation-text');
         
-        if (movesListEl) {
-            movesListEl.innerHTML = `<li>Error: ${message}</li>`;
-        }
-        
-        if (explanationEl) {
-            explanationEl.textContent = message;
-        }
-        
-        this.overlay.classList.remove('loading');
+        if (movesListEl) movesListEl.innerHTML = '<li>Error: ' + message + '</li>';
+        if (explanationEl) explanationEl.textContent = message;
     }
     
     showOverlay() {
-        if (this.overlay) {
+        if (this.overlay && this.isActive) {
             this.overlay.style.display = 'block';
         }
     }
@@ -526,21 +399,30 @@ class ChessAIOverlay {
     }
 }
 
-// Initialize when DOM is ready
 function initializeChessAI() {
-    console.log('[Chess AI] Initializing Chess AI on:', window.location.href);
-    
-    // Only run on supported chess sites
     const hostname = window.location.hostname;
-    if (hostname.includes('chess.com') || hostname.includes('lichess.org')) {
-        new ChessAIOverlay();
-        console.log('[Chess AI] Chess AI initialized successfully');
-    } else {
-        console.log('[Chess AI] Not a supported chess site, skipping initialization');
-    }
+    const pathname = window.location.pathname;
+    
+    if (!hostname.includes('chess.com')) return;
+    
+    const validPaths = ['/play/', '/game/', '/puzzles/', '/analysis/', '/live/', '/daily/'];
+    const isValidPath = validPaths.some(path => pathname.includes(path));
+    
+    if (!isValidPath) return;
+    
+    const checkBoard = () => {
+        const hasBoard = document.querySelector('.board, #board-vs-personalities-board, [id*="board-"]');
+        if (hasBoard) {
+            new ChessAIOverlay();
+            console.log('[Chess AI] Initialized successfully');
+        } else {
+            setTimeout(checkBoard, 2000);
+        }
+    };
+    
+    setTimeout(checkBoard, 1000);
 }
 
-// Wait for DOM and run
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeChessAI);
 } else {

@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 import platform
 import os
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -20,14 +21,12 @@ class ChessEngineService:
         self.is_initialized = False
         
     def _find_stockfish_executable(self) -> Optional[str]:
-        """Find Stockfish executable path - YOUR SPECIFIC PATH"""
-        system = platform.system().lower()
-        
-        # Your specific Stockfish installation
-        your_stockfish_path = "E:/NCI/Thesis/explainable-chess-ai/stockfish/stockfish-windows-x86-64-avx2.exe"
+        """Find Stockfish executable path using configuration"""
+        # Use configured path first
+        configured_path = settings.get_stockfish_path()
         
         possible_paths = [
-            your_stockfish_path,  # Your path first priority
+            configured_path,  # Configured path first priority
             "stockfish.exe",
             "engines/stockfish.exe",
             "stockfish/stockfish.exe",
@@ -50,6 +49,7 @@ class ChessEngineService:
                 continue
                 
         # Additional Windows-specific locations
+        system = platform.system().lower()
         if system == "windows":
             additional_paths = [
                 os.path.expanduser("~/stockfish.exe"),

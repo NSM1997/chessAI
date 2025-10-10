@@ -6,36 +6,130 @@
         body {
             width: 300px;
             padding: 20px;
-            font-family: Arial, sans-serif;
+            margin: 0;
+            font-family: system-ui, sans-serif;
+            background: #4f46e5;
+            color: white;
         }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 20px;
+        }
+        
+        .status-section {
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
         .status {
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        
+        .url {
+            font-size: 12px;
+            opacity: 0.8;
+            word-break: break-all;
+        }
+        
+        .btn {
+            width: 100%;
             padding: 10px;
-            border-radius: 5px;
+            border: none;
+            border-radius: 6px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            cursor: pointer;
             margin-bottom: 10px;
         }
-        .success { background: #d4edda; color: #155724; }
-        .error { background: #f8d7da; color: #721c24; }
-        .info { background: #d1ecf1; color: #0c5460; }
-        button {
-            background: #667eea;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-            width: 100%;
-            margin: 5px 0;
+        
+        .btn:hover {
+            background: rgba(255,255,255,0.3);
         }
-        button:hover { background: #5a67d8; }
+        
+        .message {
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 10px;
+            font-size: 13px;
+            display: none;
+        }
+        
+        .message.error {
+            background: rgba(239,68,68,0.2);
+            color: #fecaca;
+        }
+        
+        .message.success {
+            background: rgba(16,185,129,0.2);
+            color: #a7f3d0;
+        }
+        
+        .manual-fen-section {
+            margin: 15px 0;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+        }
+        
+        .manual-fen-section h3 {
+            margin: 0 0 10px 0;
+            color: #e5e7eb;
+            font-size: 14px;
+        }
+        
+        .manual-fen-section p {
+            margin: 0 0 10px 0;
+            color: #d1d5db;
+            font-size: 12px;
+        }
+        
+        .manual-fen-section input {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 12px;
+        }
+        
+        .manual-fen-section input::placeholder {
+            color: #9ca3af;
+        }
     </style>
 </head>
 <body>
-    <h2>Chess AI Extension</h2>
-    <div id="status" class="status info">Ready</div>
+    <div class="header">
+        <h1>♔ Chess AI</h1>
+    </div>
     
-    <button id="test-extraction">Test FEN Extraction</button>
-    <button id="toggle-overlay">Toggle Overlay</button>
-    <button id="analyze-position">Analyze Position</button>
+    <div class="status-section">
+        <div id="status" class="status">Checking status...</div>
+        <div id="current-url" class="url">Loading...</div>
+    </div>
+    
+        <button id="refresh-btn" class="btn">Refresh Status</button>
+        <button id="test-analysis-btn" class="btn">Test Analysis</button>
+        
+        <div class="manual-fen-section">
+            <h3>Manual FEN Input</h3>
+            <p>If automatic extraction fails, enter the FEN manually:</p>
+            <input type="text" id="manual-fen" placeholder="e.g., 8/2q2k1/2b1Q1p1/P5N1/3R4/7P/5PP1/7K b - - 0 1" />
+            <button id="analyze-manual-fen" class="btn">Analyze Manual FEN</button>
+            <button id="debug-fen-extraction" class="btn">Debug FEN Extraction</button>
+        </div>
+        
+        <div id="error-message" class="message"></div>
     
     <script src="popup.js"></script>
 </body>

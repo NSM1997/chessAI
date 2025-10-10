@@ -16,6 +16,10 @@ from app.core.config import settings
 from app.services.chess_engine import ChessEngineService
 from app.services.explanation_engine import ExplanationEngine
 from app.services.ml_service import MLService
+from app.models.chess_models import (
+    AnalysisRequest, AnalysisResponse, MoveExplanationRequest, 
+    HealthResponse, ErrorResponse
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -33,15 +37,7 @@ app = FastAPI(
 # CORS middleware for browser extension
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "chrome-extension://*",
-        "moz-extension://*", 
-        "http://localhost:3000",
-        "https://chess.com",
-        "https://www.chess.com",
-        "https://lichess.org",
-        "*"  # Allow all origins for development (remove in production)
-    ],
+    allow_origins=settings.allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -53,27 +49,7 @@ chess_engine = ChessEngineService()
 explanation_engine = ExplanationEngine()
 ml_service = MLService()
 
-# Pydantic models
-class AnalysisRequest(BaseModel):
-    fen: str
-    depth: Optional[int] = 15
-    user_skill_level: Optional[str] = "intermediate"
-    explanation_type: Optional[str] = "comprehensive"
-
-class MoveExplanation(BaseModel):
-    move: str
-    explanation: str
-    tactical_motifs: List[str]
-    strategic_concepts: List[str]
-    confidence: float
-    engine_evaluation: Dict
-
-class AnalysisResponse(BaseModel):
-    fen: str
-    best_moves: List[Dict]
-    explanations: List[MoveExplanation]
-    position_evaluation: Dict
-    learning_insights: List[str]
+# Models are now imported from chess_models.py
 
 @app.on_event("startup")
 async def startup_event():
@@ -93,10 +69,18 @@ async def shutdown_event():
 async def root():
     return {"message": "Explainable Chess AI API", "status": "running", "version": "1.0.0"}
 
-@app.get("/health")
+@app.get("/health", response_model=HealthResponse)
 async def health_check():
     """Health check endpoint"""
-    return {"status": "healthy", "timestamp": asyncio.get_event_loop().time()}
+    return HealthResponse(
+        status="healthy",
+        timestamp=asyncio.get_event_loop().time(),
+        version="1.0.0",
+        services={
+            "chess_engine": chess_engine.is_initialized,
+            "ml_service": ml_service.is_initialized
+        }
+    )
 
 @app.post("/analyze-position", response_model=AnalysisResponse)
 async def analyze_position(request: AnalysisRequest):
@@ -132,7 +116,8 @@ async def analyze_position(request: AnalysisRequest):
             best_moves=engine_result["best_moves"],
             explanations=explanations,
             position_evaluation=engine_result["evaluation"],
-            learning_insights=ml_insights
+            learning_insights=ml_insights,
+            analysis_time=None  # Could add timing if needed
         )
         
         return response
@@ -142,22 +127,22 @@ async def analyze_position(request: AnalysisRequest):
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
 @app.post("/explain-move")
-async def explain_move(fen: str, move: str, skill_level: str = "intermediate"):
+async def explain_move(request: MoveExplanationRequest):
     """
     Explain a specific move in context
     """
     try:
-        board = chess.Board(fen)
-        move_obj = chess.Move.from_uci(move)
+        board = chess.Board(request.fen)
+        move_obj = chess.Move.from_uci(request.move)
         
         if move_obj not in board.legal_moves:
             raise HTTPException(status_code=400, detail="Illegal move")
         
         explanation = await explanation_engine.explain_specific_move(
-            fen, move, skill_level
+            request.fen, request.move, request.skill_level
         )
         
-        return {"move": move, "explanation": explanation}
+        return {"move": request.move, "explanation": explanation}
         
     except Exception as e:
         logger.error(f"Move explanation error: {str(e)}")

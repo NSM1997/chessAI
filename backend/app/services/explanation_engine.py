@@ -25,7 +25,8 @@ class ExplanationEngine:
             # Try to get ML insights if available
             ml_insights = []
             try:
-                from .ml_service import ml_service
+                # Import here to avoid circular imports
+                from app.services.ml_service import ml_service
                 ml_insights = await ml_service.get_position_insights(fen)
             except ImportError:
                 logger.warning("ML service not available, using rule-based explanations")

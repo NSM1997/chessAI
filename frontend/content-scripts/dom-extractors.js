@@ -589,13 +589,15 @@ class ChessDOMExtractor {
                         // FEN coordinates: 0,0 = a8 (top-left), 7,7 = h1 (bottom-right)
                         
                         if (isBoardFlipped) {
-                            // For flipped boards (Chess.com's "flipped" class), we need to invert both coordinates
-                            // This produces the correct FEN for a visually standard board
+                            // For flipped boards (playing as Black), invert both coordinates
+                            // DOM coordinates when Black on bottom: rank 0 = rank 1, rank 7 = rank 8
                             fenRank = 7 - rank; // Invert rank coordinates
                             fenFile = 7 - file; // Invert file coordinates
                         } else {
-                            // For normal boards, use standard mapping
-                            fenRank = 7 - rank; // Invert rank coordinates
+                            // For normal boards (playing as White, White on bottom)
+                            // DOM coordinates: rank 0 = rank 8 (top), rank 7 = rank 1 (bottom)
+                            // FEN array: index 0 = rank 8, index 7 = rank 1
+                            fenRank = rank;     // Direct rank mapping
                             fenFile = file;     // Direct file mapping
                         }
 

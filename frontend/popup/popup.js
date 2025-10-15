@@ -109,7 +109,7 @@ class ChessAIPopup {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     fen: currentFEN,
-                    depth: 10,
+                    depth: 20,
                     user_skill_level: 'intermediate',
                     explanation_type: 'comprehensive'
                 })
@@ -340,7 +340,7 @@ class ChessAIPopup {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     fen: fen,
-                    depth: 10,
+                    depth: 20,
                     user_skill_level: 'intermediate',
                     explanation_type: 'comprehensive'
                 })

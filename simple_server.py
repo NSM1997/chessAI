@@ -19,6 +19,38 @@ app.add_middleware(
     expose_headers=["*"]
 )
 
+# Global chess engine instance
+chess_engine_service = None
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize chess engine on startup"""
+    global chess_engine_service
+    try:
+        import sys
+        import os
+        sys.path.append(os.path.join(os.path.dirname(__file__), 'backend'))
+        
+        from app.services.chess_engine import ChessEngineService
+        
+        chess_engine_service = ChessEngineService()
+        await chess_engine_service.initialize()
+        
+        if chess_engine_service.is_initialized:
+            print("[SUCCESS] Stockfish engine initialized successfully!")
+        else:
+            print("[WARNING] Stockfish initialization failed, using fallback analysis")
+    except Exception as e:
+        print(f"[ERROR] Failed to initialize chess engine: {e}")
+        chess_engine_service = None
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanup on shutdown"""
+    global chess_engine_service
+    if chess_engine_service:
+        await chess_engine_service.cleanup()
+
 @app.get("/")
 async def root():
     return {"message": "Simple test server", "status": "running"}
@@ -105,33 +137,16 @@ async def analyze_position(request: dict):
         
         # Try to use Stockfish for better analysis
         stockfish_analysis = None
-        try:
-            # Import the chess engine service
-            import sys
-            import os
-            sys.path.append(os.path.join(os.path.dirname(__file__), 'backend'))
-            
-            from app.services.chess_engine import get_chess_engine
-            import asyncio
-            
-            # Get chess engine service
-            engine_service = asyncio.run(get_chess_engine())
-            
-            # Initialize if not already done
-            if not engine_service.is_initialized:
-                print("Initializing Stockfish engine...")
-                asyncio.run(engine_service.initialize())
-            
-            if engine_service.is_initialized:
+        if chess_engine_service and chess_engine_service.is_initialized:
+            try:
                 print("Using Stockfish for analysis...")
-                stockfish_analysis = asyncio.run(engine_service.analyze_position(fen, depth=15))
-                print(f"Stockfish analysis: {stockfish_analysis}")
-            else:
-                print("Stockfish not available, using fallback analysis")
-                
-        except Exception as e:
-            print(f"Stockfish analysis failed: {e}, using fallback")
-            stockfish_analysis = None
+                stockfish_analysis = await chess_engine_service.analyze_position(fen, depth=20)
+                print(f"Stockfish analysis complete: {stockfish_analysis['best_moves'][0] if stockfish_analysis.get('best_moves') else 'No moves'}")
+            except Exception as e:
+                print(f"Stockfish analysis failed: {e}, using fallback")
+                stockfish_analysis = None
+        else:
+            print("Stockfish not available, using fallback analysis")
         
         # Basic position analysis
         material_balance = 0
@@ -144,52 +159,59 @@ async def analyze_position(request: dict):
             else:
                 material_balance -= value
         
-        # Generate a realistic best move based on position
-        legal_moves = list(board.legal_moves)
-        if not legal_moves:
-            # Checkmate or stalemate
-            if board.is_checkmate():
-                best_move = "checkmate"
-                san_move = "Checkmate"
-                explanation = f"It's {turn}'s turn, but the position is checkmate. The game is over."
-                score_value = 10000 if turn == "White" else -10000
+        # Use Stockfish analysis if available, otherwise fall back
+        if stockfish_analysis and stockfish_analysis.get('best_moves'):
+            # Use Stockfish's best move and detailed explanations
+            best_moves_data = stockfish_analysis['best_moves']
+            best_move_info = best_moves_data[0]
+            best_move = best_move_info['move']
+            san_move = best_move_info['san']
+            score_value = best_move_info['score']['value']
+            
+            # Use the detailed explanation from the engine if available
+            if stockfish_analysis.get('move_explanations'):
+                explanation = stockfish_analysis['move_explanations'][0]['explanation']
             else:
-                best_move = "stalemate"
-                san_move = "Stalemate"
-                explanation = f"It's {turn}'s turn, but the position is stalemate. The game is a draw."
-                score_value = 0
+                # Fallback to simple explanation
+                explanation = f"It's {turn}'s turn. The best move is {san_move} (evaluation: {score_value/100:+.2f})."
         else:
-            # Pick a reasonable move based on position
-            best_move_obj = legal_moves[0]  # Take first legal move as example
-            best_move = best_move_obj.uci()
-            san_move = board.san(best_move_obj)
-            
-            # Generate contextual explanation
-            if position_type == "starting_position":
-                if turn == "White":
-                    explanation = f"It's {turn}'s turn. The best move is {san_move}. This is a solid opening move that develops pieces and controls the center."
+            # Fallback: use legal moves
+            legal_moves = list(board.legal_moves)
+            if not legal_moves:
+                # Checkmate or stalemate
+                if board.is_checkmate():
+                    best_move = "checkmate"
+                    san_move = "Checkmate"
+                    explanation = f"It's {turn}'s turn, but the position is checkmate. The game is over."
+                    score_value = 10000 if turn == "White" else -10000
                 else:
-                    explanation = f"It's {turn}'s turn. The best move is {san_move}. This is a good response that challenges White's center control."
-            elif board.is_check():
-                explanation = f"It's {turn}'s turn. The best move is {san_move}. This move gets out of check and improves the position."
-            elif material_balance > 2:
-                explanation = f"It's {turn}'s turn. The best move is {san_move}. White has a material advantage, so focus on consolidating and converting the advantage."
-            elif material_balance < -2:
-                explanation = f"It's {turn}'s turn. The best move is {san_move}. Black has a material advantage, so focus on maintaining the advantage and creating threats."
+                    best_move = "stalemate"
+                    san_move = "Stalemate"
+                    explanation = f"It's {turn}'s turn, but the position is stalemate. The game is a draw."
+                    score_value = 0
             else:
-                explanation = f"It's {turn}'s turn. The best move is {san_move}. This move improves the position in this {position_type}."
-            
-            # Calculate realistic score based on material
-            score_value = int(material_balance * 100)
+                # Pick first legal move as fallback
+                best_move_obj = legal_moves[0]
+                best_move = best_move_obj.uci()
+                san_move = board.san(best_move_obj)
+                score_value = int(material_balance * 100)
+                explanation = f"It's {turn}'s turn. The move {san_move} is a legal option in this {position_type}. (Engine unavailable - showing legal move)"
         
         # Generate tactical motifs and strategic concepts
         tactical_motifs = []
         strategic_concepts = []
         
-        if board.is_check():
-            tactical_motifs.append("check")
-        if material_balance != 0:
-            tactical_motifs.append("material_advantage")
+        # Use Stockfish analysis if available
+        if stockfish_analysis and stockfish_analysis.get('tactical_motifs'):
+            tactical_motifs = stockfish_analysis['tactical_motifs']
+        else:
+            # Fallback tactical detection
+            if board.is_check():
+                tactical_motifs.append("check")
+            if material_balance != 0:
+                tactical_motifs.append("material_advantage")
+        
+        # Strategic concepts based on position
         if position_type == "opening":
             strategic_concepts.append("development")
             strategic_concepts.append("center_control")
@@ -216,17 +238,25 @@ async def analyze_position(request: dict):
             "message": f"Could not analyze position: {str(e)}"
         }
     
-    return {
-        "fen": fen,
-        "best_moves": [
+    # Prepare best moves response
+    if stockfish_analysis and stockfish_analysis.get('best_moves'):
+        # Use all moves from Stockfish
+        best_moves_response = stockfish_analysis['best_moves']
+    else:
+        # Use fallback move
+        best_moves_response = [
             {
                 "move": best_move,
                 "san": san_move,
-                "score": {"type": "cp", "value": score_value, "display": f"+{score_value/100:.2f}"},
-                "pv": [best_move, "g1f3", "b1c3"],
-                "depth": 15
+                "score": {"type": "cp", "value": score_value, "display": f"{score_value/100:+.2f}"},
+                "pv": [best_move],
+                "depth": 1
             }
-        ],
+        ]
+    
+    return {
+        "fen": fen,
+        "best_moves": best_moves_response,
         "explanations": [
             {
                 "move": best_move,
@@ -239,17 +269,17 @@ async def analyze_position(request: dict):
                     "move": best_move,
                     "san": san_move,
                     "score": {"type": "cp", "value": score_value, "display": f"+{score_value/100:.2f}"},
-                    "pv": [best_move, "g1f3", "b1c3"],
-                    "depth": 15
+                    "pv": [best_move],
+                    "depth": 20
                 }
             }
         ],
             "position_evaluation": {
                 "score": {"type": "cp", "value": score_value, "display": f"{score_value/100:+.2f}"},
                 "position_type": position_type,
-                "material_balance": {"white": 39 + material_balance, "black": 39 - material_balance, "difference": material_balance},
-                "king_safety": {"white": 8, "black": 8},
-                "piece_activity": {"white": 12, "black": 12}
+                "material_balance": stockfish_analysis['evaluation']['material_balance'] if stockfish_analysis else {"white": 39 + material_balance, "black": 39 - material_balance, "difference": material_balance},
+                "king_safety": stockfish_analysis['evaluation']['king_safety'] if stockfish_analysis else {"white": 8, "black": 8},
+                "piece_activity": stockfish_analysis['evaluation']['piece_activity'] if stockfish_analysis else {"white": 12, "black": 12}
             },
         "learning_insights": [
             f"Current turn: {turn}",

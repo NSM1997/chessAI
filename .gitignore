@@ -5,6 +5,7 @@ node_modules/
 # IDE
 .vscode/
 *.log
+server_output.txt
 
 # Build / binaries (don't commit Stockfish binary)
 stockfish/

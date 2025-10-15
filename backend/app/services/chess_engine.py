@@ -27,6 +27,8 @@ class ChessEngineService:
         
         possible_paths = [
             configured_path,  # Configured path first priority
+            # Direct paths from project root
+            "stockfish/stockfish-windows-x86-64-avx2.exe",
             "stockfish.exe",
             "engines/stockfish.exe",
             "stockfish/stockfish.exe",
@@ -41,9 +43,11 @@ class ChessEngineService:
         # Check each possible path
         for path in possible_paths:
             try:
-                if os.path.exists(path) and os.access(path, os.X_OK):
-                    logger.info(f"Found Stockfish at: {path}")
-                    return path
+                if path and os.path.exists(path):
+                    # On Windows, just check if file exists (executable check unreliable)
+                    if platform.system().lower() == "windows" or os.access(path, os.X_OK):
+                        logger.info(f"Found Stockfish at: {path}")
+                        return path
             except Exception as e:
                 logger.debug(f"Could not access {path}: {e}")
                 continue
@@ -100,7 +104,7 @@ class ChessEngineService:
             logger.error(f"Failed to initialize chess engines: {e}")
             return False
 
-    async def analyze_position(self, fen: str, depth: int = 15) -> Dict[str, Any]:
+    async def analyze_position(self, fen: str, depth: int = 20) -> Dict[str, Any]:
         """
         Analyze chess position - IGNORE is_valid() CHECK
         """
@@ -130,49 +134,82 @@ class ChessEngineService:
             
             # Try to use Stockfish with the board
             try:
-                # Get best move from Stockfish
-                best_move_result = self.stockfish_engine.play(
+                # Get best move with full analysis (not just play)
+                analysis_result = self.stockfish_engine.analyse(
                     board,
-                    chess.engine.Limit(time=1.0)
+                    chess.engine.Limit(depth=depth, time=2.0),
+                    multipv=3  # Get top 3 moves
                 )
                 
                 best_moves = []
                 
-                # Add the engine's best move
-                if best_move_result and best_move_result.move:
-                    move = best_move_result.move
-                    best_moves.append({
-                        "move": move.uci(),
-                        "san": board.san(move),
-                        "score": {"type": "cp", "value": 50, "display": "+0.50"},
-                        "pv": [move.uci()],
-                        "depth": depth
-                    })
-                    logger.info(f"Stockfish suggested: {board.san(move)}")
-                
-                # Add additional legal moves
-                for additional_move in legal_moves[:2]:
-                    if len(best_moves) >= 3:
-                        break
+                # Process analysis results
+                if isinstance(analysis_result, list):
+                    # multipv returns a list
+                    for i, result in enumerate(analysis_result):
+                        if "pv" in result and len(result["pv"]) > 0:
+                            move = result["pv"][0]
+                            score_info = result.get("score", chess.engine.PovScore(chess.engine.Cp(0), chess.WHITE))
+                            score_dict = self._score_to_dict(score_info, board.turn)
+                            
+                            best_moves.append({
+                                "move": move.uci(),
+                                "san": board.san(move),
+                                "score": score_dict,
+                                "pv": [m.uci() for m in result["pv"][:5]],  # Get first 5 moves of principal variation
+                                "depth": result.get("depth", depth),
+                                "nodes": result.get("nodes", 0)
+                            })
+                            
+                            if i == 0:
+                                logger.info(f"Stockfish suggested: {board.san(move)} (score: {score_dict['display']}) at depth {depth}")
+                else:
+                    # Single result
+                    if "pv" in analysis_result and len(analysis_result["pv"]) > 0:
+                        move = analysis_result["pv"][0]
+                        score_info = analysis_result.get("score", chess.engine.PovScore(chess.engine.Cp(0), chess.WHITE))
+                        score_dict = self._score_to_dict(score_info, board.turn)
                         
-                    if best_move_result.move and additional_move == best_move_result.move:
-                        continue
-                        
-                    best_moves.append({
-                        "move": additional_move.uci(),
-                        "san": board.san(additional_move),
-                        "score": {"type": "cp", "value": 0, "display": "0.00"},
-                        "pv": [additional_move.uci()],
-                        "depth": depth
-                    })
+                        best_moves.append({
+                            "move": move.uci(),
+                            "san": board.san(move),
+                            "score": score_dict,
+                            "pv": [m.uci() for m in analysis_result["pv"][:5]],
+                            "depth": analysis_result.get("depth", depth),
+                            "nodes": analysis_result.get("nodes", 0)
+                        })
+                        logger.info(f"Stockfish suggested: {board.san(move)} (score: {score_dict['display']}) at depth {depth}")
                 
-                if not best_moves:
+                if not best_moves or len(best_moves) == 0:
                     logger.warning("No moves from Stockfish, using fallback")
                     return self._get_fallback_analysis(fen)
                 
+                # Generate detailed explanations for each move
+                move_explanations = []
+                for i, move_data in enumerate(best_moves):
+                    move_uci = move_data["move"]
+                    move_obj = chess.Move.from_uci(move_uci)
+                    pv_ucis = move_data.get("pv", [])
+                    
+                    explanation = self._generate_move_explanation(
+                        board, 
+                        move_obj, 
+                        move_data["score"],
+                        pv_ucis
+                    )
+                    
+                    move_explanations.append({
+                        "move": move_uci,
+                        "san": move_data["san"],
+                        "explanation": explanation,
+                        "score": move_data["score"],
+                        "pv": pv_ucis,
+                        "rank": i + 1  # 1st best, 2nd best, etc.
+                    })
+                
                 # Position evaluation
                 evaluation = {
-                    "score": {"type": "cp", "value": 25, "display": "+0.25"},
+                    "score": best_moves[0]["score"] if best_moves else {"type": "cp", "value": 0, "display": "0.00"},
                     "position_type": self._classify_position(board),
                     "material_balance": self._calculate_material_balance(board),
                     "king_safety": self._evaluate_king_safety(board),
@@ -181,6 +218,7 @@ class ChessEngineService:
                 
                 return {
                     "best_moves": best_moves,
+                    "move_explanations": move_explanations,
                     "evaluation": evaluation,
                     "legal_moves_count": len(legal_moves),
                     "is_endgame": self._is_endgame(board),
@@ -396,6 +434,106 @@ class ChessEngineService:
             return motifs
         except Exception:
             return []
+    
+    def _generate_move_explanation(self, board: chess.Board, move: chess.Move, score: Dict, pv: List[str]) -> str:
+        """Generate detailed explanation for a move"""
+        try:
+            move_san = board.san(move)
+            turn = "White" if board.turn == chess.WHITE else "Black"
+            
+            # Make the move to analyze the resulting position
+            test_board = board.copy()
+            test_board.push(move)
+            
+            # Extract key information
+            is_check = test_board.is_check()
+            is_checkmate = test_board.is_checkmate()
+            is_capture = board.is_capture(move)
+            is_castling = board.is_castling(move)
+            
+            # Get piece that moved
+            piece = board.piece_at(move.from_square)
+            piece_name = chess.piece_name(piece.piece_type).title() if piece else "Piece"
+            
+            # Build explanation
+            explanation_parts = []
+            
+            # Start with the move
+            explanation_parts.append(f"{turn} plays {move_san}")
+            
+            # Add tactical details
+            if is_checkmate:
+                explanation_parts.append("delivering checkmate!")
+                return ". ".join(explanation_parts)
+            
+            if is_check:
+                explanation_parts.append("giving check")
+            
+            if is_castling:
+                if move.to_square > move.from_square:
+                    explanation_parts.append("castling kingside for king safety")
+                else:
+                    explanation_parts.append("castling queenside for king safety")
+            
+            if is_capture:
+                captured_piece = board.piece_at(move.to_square)
+                if captured_piece:
+                    captured_name = chess.piece_name(captured_piece.piece_type)
+                    explanation_parts.append(f"capturing the {captured_name}")
+            
+            # Add score evaluation
+            score_value = score.get("value", 0)
+            if score["type"] == "mate":
+                mate_in = score["value"]
+                if mate_in > 0:
+                    explanation_parts.append(f"forcing mate in {mate_in}")
+                else:
+                    explanation_parts.append(f"avoiding mate in {abs(mate_in)}")
+            else:
+                # Centipawn advantage
+                if abs(score_value) > 200:
+                    if score_value > 0:
+                        explanation_parts.append("gaining a decisive advantage")
+                    else:
+                        explanation_parts.append("with the best practical chances")
+                elif abs(score_value) > 100:
+                    if score_value > 0:
+                        explanation_parts.append("with a clear advantage")
+                    else:
+                        explanation_parts.append("fighting for equality")
+                elif abs(score_value) > 50:
+                    if score_value > 0:
+                        explanation_parts.append("with a slight edge")
+                    else:
+                        explanation_parts.append("maintaining the balance")
+                else:
+                    explanation_parts.append("keeping the position equal")
+            
+            # Add strategic reasoning based on piece and position
+            if piece:
+                if piece.piece_type == chess.PAWN:
+                    if chess.square_rank(move.to_square) >= 6 or chess.square_rank(move.to_square) <= 1:
+                        explanation_parts.append("Advancing the pawn creates threats and restricts the opponent")
+                elif piece.piece_type == chess.KNIGHT:
+                    explanation_parts.append("Developing the knight to an active square")
+                elif piece.piece_type == chess.BISHOP:
+                    explanation_parts.append("Activating the bishop on the long diagonal")
+                elif piece.piece_type == chess.ROOK:
+                    if move.to_square in [chess.D1, chess.E1, chess.D8, chess.E8]:
+                        explanation_parts.append("Centralizing the rook for maximum activity")
+                elif piece.piece_type == chess.QUEEN:
+                    if is_check or is_capture:
+                        explanation_parts.append("Using the queen's power to create immediate threats")
+            
+            # Add follow-up plan if we have a principal variation
+            if len(pv) > 1:
+                explanation_parts.append(f"The plan continues with {len(pv)-1} more precise moves")
+            
+            return ". ".join(explanation_parts) + "."
+            
+        except Exception as e:
+            logger.error(f"Error generating explanation: {e}")
+            return f"{turn} plays the best move {move_san}, maintaining optimal play."
 
     async def get_best_move(self, fen: str, depth: int = 12) -> Optional[Dict[str, Any]]:
         """Get the best move for a position"""

@@ -467,5 +467,5 @@ async def analyze_position(request: dict):
     }
 
 if __name__ == "__main__":
-    print("Starting simple test server on http://localhost:8002")
-    uvicorn.run(app, host="0.0.0.0", port=8002, log_level="info")
+    print("Starting simple test server on http://localhost:8001")
+    uvicorn.run(app, host="0.0.0.0", port=8001, log_level="info")

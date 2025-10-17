@@ -1,0 +1,22 @@
+[
+  "fork",
+  "pin",
+  "skewer",
+  "discoveredAttack",
+  "doubleAttack",
+  "mate",
+  "mateIn1",
+  "mateIn2",
+  "attraction",
+  "deflection",
+  "interference",
+  "clearance",
+  "sacrifice",
+  "backRankMate",
+  "hangingPiece",
+  "trappedPiece",
+  "enPassant",
+  "promotion",
+  "underPromotion",
+  "xRayAttack"
+]

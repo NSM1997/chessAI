@@ -217,20 +217,69 @@ async def analyze_position(request: dict):
     active_color = fen_parts[1] if len(fen_parts) > 1 else "w"
     turn = "White" if active_color == "w" else "Black"
     
-    # Determine position type based on FEN
-    position_type = "opening"
+    # Determine position type based on FEN and piece analysis
+    position_type = "opening"  # Default - Updated logic v2
+    
+    # Check if it's the starting position
     if "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR" in fen:
         position_type = "starting_position"
-    elif len(fen_parts) > 5:
+    else:
+        # Analyze the position to determine game phase
         try:
-            move_number = int(fen_parts[5])
-            if move_number > 40:
+            import chess
+            board = chess.Board(fen)
+            
+            # Count pieces to determine game phase
+            piece_count = len(board.piece_map())
+            queens = len([p for p in board.piece_map().values() if p.piece_type == chess.QUEEN])
+            
+            # Count pawns to determine structure
+            pawns = len([p for p in board.piece_map().values() if p.piece_type == chess.PAWN])
+            
+            # Count minor pieces (knights and bishops)
+            minor_pieces = len([p for p in board.piece_map().values() if p.piece_type in [chess.KNIGHT, chess.BISHOP]])
+            
+            # Determine position type based on piece count and structure
+            if piece_count <= 12:  # Very few pieces left
                 position_type = "endgame"
-            elif move_number > 20:
+            elif piece_count <= 20 or queens == 0:  # Few pieces or no queens
+                position_type = "endgame"
+            elif piece_count <= 24 and minor_pieces <= 4:  # Reduced material
+                position_type = "endgame"
+            elif piece_count >= 30 and pawns >= 12:  # Many pieces and pawns
+                position_type = "opening"
+            elif piece_count >= 24:  # Good amount of pieces
                 position_type = "middlegame"
-        except (ValueError, IndexError):
-            # If we can't parse the move number, default to opening
-            position_type = "opening"
+            else:
+                position_type = "middlegame"
+                
+            # Override with move number if available and reasonable
+            if len(fen_parts) > 5:
+                try:
+                    move_number = int(fen_parts[5])
+                    if move_number > 50:
+                        position_type = "endgame"
+                    elif move_number > 25:
+                        position_type = "middlegame"
+                    elif move_number <= 3:
+                        position_type = "opening"
+                except (ValueError, IndexError):
+                    pass  # Keep the piece-based analysis
+                    
+        except Exception:
+            # Fallback to move number analysis
+            if len(fen_parts) > 5:
+                try:
+                    move_number = int(fen_parts[5])
+                    if move_number > 40:
+                        position_type = "endgame"
+                    elif move_number > 20:
+                        position_type = "middlegame"
+                except (ValueError, IndexError):
+                    position_type = "opening"
+    
+    # Initialize opening_info at function level
+    opening_info = {"name": None, "eco": None}
     
     # Analyze the actual chess position
     try:
@@ -369,11 +418,10 @@ async def analyze_position(request: dict):
             }
         ]
     
-        # Detect opening if in opening phase
-        opening_info = {"name": None, "eco": None}
-        if position_type == "opening" and best_moves_response:
-            pv_moves = best_moves_response[0].get('pv', [])
-            opening_info = detect_opening(fen, pv_moves)
+    # Detect opening if in opening phase
+    if position_type == "opening" and best_moves_response:
+        pv_moves = best_moves_response[0].get('pv', [])
+        opening_info = detect_opening(fen, pv_moves)
     
     return {
         "fen": fen,
@@ -419,5 +467,5 @@ async def analyze_position(request: dict):
     }
 
 if __name__ == "__main__":
-    print("Starting simple test server on http://localhost:8001")
-    uvicorn.run(app, host="0.0.0.0", port=8001, log_level="info")
+    print("Starting simple test server on http://localhost:8002")
+    uvicorn.run(app, host="0.0.0.0", port=8002, log_level="info")

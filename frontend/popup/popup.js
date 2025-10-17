@@ -131,13 +131,43 @@ class ChessAIPopup {
             const bestMove = analysis.best_moves[0];
             const explanation = analysis.explanations[0];
             const insights = analysis.learning_insights;
+            const positionEval = analysis.position_evaluation;
             
-            let message = `Analysis successful!\n\n`;
-            message += `Turn: ${insights[0]}\n`;
-            message += `Position: ${insights[1]}\n`;
-            message += `Best move: ${bestMove.san} (${bestMove.move})\n`;
-            message += `Score: ${bestMove.score.display}\n\n`;
-            message += `Explanation: ${explanation.explanation}`;
+            // Format the message with improved structure
+            let message = `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+            message += `BEST MOVE: ${bestMove.san} (${bestMove.move})\n`;
+            message += `SCORE: ${bestMove.score.display}\n`;
+            message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+            
+            message += `${insights[0]}\n`;
+            message += `Position Score: ${positionEval.score.display}\n`;
+            message += `Position Type: ${positionEval.position_type}\n`;
+            
+            // Add Opening Variation if available
+            if (analysis.opening_info && analysis.opening_info.name) {
+                message += `Opening: ${analysis.opening_info.name}\n`;
+            }
+            message += `\n`;
+            
+            // Add Tactical Motifs from explanation
+            if (explanation.tactical_motifs && explanation.tactical_motifs.length > 0) {
+                message += `Tactical Motifs:\n`;
+                explanation.tactical_motifs.forEach(motif => {
+                    message += `  • ${motif}\n`;
+                });
+                message += `\n`;
+            }
+            
+            // Add Strategic Concepts
+            if (explanation.strategic_concepts && explanation.strategic_concepts.length > 0) {
+                message += `Strategic Concepts:\n`;
+                explanation.strategic_concepts.forEach(concept => {
+                    message += `  • ${concept}\n`;
+                });
+                message += `\n`;
+            }
+            
+            message += `Explanation:\n${explanation.explanation}`;
             
             this.showMessage(message, 'success');
             
@@ -362,13 +392,43 @@ class ChessAIPopup {
             const bestMove = analysis.best_moves[0];
             const explanation = analysis.explanations[0];
             const insights = analysis.learning_insights;
+            const positionEval = analysis.position_evaluation;
             
-            let message = `Analysis successful!\n\n`;
-            message += `Turn: ${insights[0]}\n`;
-            message += `Position: ${insights[1]}\n`;
-            message += `Best move: ${bestMove.san} (${bestMove.move})\n`;
-            message += `Score: ${bestMove.score.display}\n\n`;
-            message += `Explanation: ${explanation.explanation}`;
+            // Format the message with improved structure
+            let message = `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+            message += `BEST MOVE: ${bestMove.san} (${bestMove.move})\n`;
+            message += `SCORE: ${bestMove.score.display}\n`;
+            message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+            
+            message += `${insights[0]}\n`;
+            message += `Position Score: ${positionEval.score.display}\n`;
+            message += `Position Type: ${positionEval.position_type}\n`;
+            
+            // Add Opening Variation if available
+            if (analysis.opening_info && analysis.opening_info.name) {
+                message += `Opening: ${analysis.opening_info.name}\n`;
+            }
+            message += `\n`;
+            
+            // Add Tactical Motifs from explanation
+            if (explanation.tactical_motifs && explanation.tactical_motifs.length > 0) {
+                message += `Tactical Motifs:\n`;
+                explanation.tactical_motifs.forEach(motif => {
+                    message += `  • ${motif}\n`;
+                });
+                message += `\n`;
+            }
+            
+            // Add Strategic Concepts
+            if (explanation.strategic_concepts && explanation.strategic_concepts.length > 0) {
+                message += `Strategic Concepts:\n`;
+                explanation.strategic_concepts.forEach(concept => {
+                    message += `  • ${concept}\n`;
+                });
+                message += `\n`;
+            }
+            
+            message += `Explanation:\n${explanation.explanation}`;
             
             this.showMessage(message, 'success');
             
@@ -549,41 +609,47 @@ class ChessAIPopup {
                     return;
                 }
                 
-                // Display debug information
-                let message = `🔍 FEN Extraction Debug Results:\n\n`;
-                message += `📍 URL: ${debugInfo.url}\n`;
-                message += `⏰ Time: ${debugInfo.timestamp}\n\n`;
-                
                 if (debugInfo.extractedFen) {
-                    message += `✅ SUCCESS: FEN extracted using ${debugInfo.extractionMethod}\n`;
-                    message += `🎯 FEN: ${debugInfo.extractedFen}\n\n`;
-                    
                     // Auto-fill the extracted FEN
                     if (this.manualFenInput) {
                         this.manualFenInput.value = debugInfo.extractedFen;
                     }
-                } else {
-                    message += `❌ FAILED: No FEN extracted\n\n`;
-                }
-                
-                message += `🏗️ Board Elements Found: ${debugInfo.boardElements.length}\n`;
-                debugInfo.boardElements.slice(0, 3).forEach((board, index) => {
-                    message += `  ${index + 1}. ${board.selector} - ${board.dimensions} at ${board.position}\n`;
-                });
-                
-                message += `\n♟️ Piece Elements Found: ${debugInfo.pieceElements.length}\n`;
-                debugInfo.pieceElements.slice(0, 5).forEach((piece, index) => {
-                    message += `  ${index + 1}. ${piece.classes.join(' ')} at ${piece.position}\n`;
-                });
-                
-                if (debugInfo.errors.length > 0) {
-                    message += `\n⚠️ Errors:\n`;
-                    debugInfo.errors.forEach(error => {
-                        message += `  • ${error}\n`;
+                    
+                    // Create visual board representation
+                    const fenParts = debugInfo.extractedFen.split(' ');
+                    const boardPart = fenParts[0];
+                    const ranks = boardPart.split('/');
+                    
+                    let message = `FEN Extracted Successfully!\n\n`;
+                    message += `FEN: ${debugInfo.extractedFen}\n\n`;
+                    message += `Visual Board:\n`;
+                    message += `  ┌─────────────────┐\n`;
+                    
+                    ranks.forEach((rank, index) => {
+                        const rankNum = 8 - index;
+                        let rankStr = `${rankNum} │ `;
+                        
+                        for (let char of rank) {
+                            if (char >= '1' && char <= '8') {
+                                // Empty squares
+                                const emptyCount = parseInt(char);
+                                rankStr += '. '.repeat(emptyCount);
+                            } else {
+                                // Piece
+                                rankStr += char + ' ';
+                            }
+                        }
+                        
+                        message += rankStr + '│\n';
                     });
+                    
+                    message += `  └─────────────────┘\n`;
+                    message += `    a b c d e f g h`;
+                    
+                    this.showMessage(message, 'success');
+                } else {
+                    this.showError('Failed to extract FEN from the page.\nPlease make sure you are on an active Chess.com game or puzzle.');
                 }
-                
-                this.showMessage(message, debugInfo.extractedFen ? 'success' : 'error');
             } else {
                 this.showError('Debug failed: No results returned');
             }

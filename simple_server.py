@@ -19,13 +19,16 @@ app.add_middleware(
     expose_headers=["*"]
 )
 
-# Global chess engine instance
+# Global service instances
 chess_engine_service = None
+tactical_analysis_service = None
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize chess engine on startup"""
-    global chess_engine_service
+    """Initialize chess engine and tactical classifier on startup"""
+    global chess_engine_service, tactical_analysis_service
+    
+    # Initialize Stockfish engine
     try:
         import sys
         import os
@@ -43,6 +46,20 @@ async def startup_event():
     except Exception as e:
         print(f"[ERROR] Failed to initialize chess engine: {e}")
         chess_engine_service = None
+    
+    # Initialize tactical ML classifier (Phase 2)
+    try:
+        from app.services.tactical_analysis import TacticalAnalysisService
+        
+        tactical_analysis_service = TacticalAnalysisService()
+        
+        if tactical_analysis_service.is_available and tactical_analysis_service.classifier:
+            print(f"[SUCCESS] Tactical classifier initialized with {len(tactical_analysis_service.classifier.theme_names)} themes!")
+        else:
+            print("[WARNING] Tactical classifier not available (model not trained yet)")
+    except Exception as e:
+        print(f"[ERROR] Failed to initialize tactical classifier: {e}")
+        tactical_analysis_service = None
 
 @app.on_event("shutdown")
 async def shutdown_event():
@@ -58,6 +75,95 @@ async def root():
 @app.get("/health")
 async def health():
     return {"status": "healthy", "message": "Test server is working"}
+
+def detect_opening(fen: str, pv_moves: list) -> dict:
+    """Detect chess opening from FEN and principal variation"""
+    try:
+        import chess
+        
+        # Create board from FEN
+        board = chess.Board(fen)
+        
+        # Count moves to determine if we're in opening
+        fen_parts = fen.split()
+        move_number = int(fen_parts[5]) if len(fen_parts) > 5 else 1
+        halfmove_clock = int(fen_parts[4]) if len(fen_parts) > 4 else 0
+        
+        # Only detect openings in early game (first 10 moves)
+        if move_number > 10:
+            return {"name": None, "eco": None}
+        
+        # Get the position's move history from PV if available
+        moves = []
+        temp_board = chess.Board()
+        
+        # Try to reconstruct game from starting position
+        # This is a simplified approach - for full opening detection,
+        # you'd need an opening book database
+        
+        # Common opening patterns based on piece positions and moves
+        pieces_str = fen.split()[0]
+        
+        # Check for common openings based on pawn structure and piece placement
+        # Check for Queen's Pawn openings (d4 or d5 pawn)
+        d4_piece = board.piece_at(chess.D4)
+        d5_piece = board.piece_at(chess.D5)
+        e4_piece = board.piece_at(chess.E4)
+        e5_piece = board.piece_at(chess.E5)
+        c5_piece = board.piece_at(chess.C5)
+        
+        # Check for d4 openings
+        if d4_piece and d4_piece.piece_type == chess.PAWN and d4_piece.color == chess.WHITE:
+            c4_piece = board.piece_at(chess.C4)
+            f6_piece = board.piece_at(chess.F6)
+            
+            if c4_piece and c4_piece.piece_type == chess.PAWN and c4_piece.color == chess.WHITE:
+                return {"name": "Queen's Gambit", "eco": "D06"}
+            elif f6_piece and f6_piece.piece_type == chess.KNIGHT and f6_piece.color == chess.BLACK:
+                return {"name": "Indian Defense", "eco": "E00"}
+            else:
+                return {"name": "Queen's Pawn Opening", "eco": "D00"}
+        
+        # Check for e4 openings
+        if e4_piece and e4_piece.piece_type == chess.PAWN and e4_piece.color == chess.WHITE:
+            if e5_piece and e5_piece.piece_type == chess.PAWN and e5_piece.color == chess.BLACK:
+                f3_piece = board.piece_at(chess.F3)
+                c6_knight = board.piece_at(chess.C6)
+                
+                if f3_piece and f3_piece.piece_type == chess.KNIGHT and f3_piece.color == chess.WHITE:
+                    if c6_knight and c6_knight.piece_type == chess.KNIGHT and c6_knight.color == chess.BLACK:
+                        return {"name": "Ruy Lopez", "eco": "C60"}
+                    else:
+                        return {"name": "King's Pawn Opening", "eco": "C20"}
+                return {"name": "King's Pawn Game", "eco": "C20"}
+            elif c5_piece and c5_piece.piece_type == chess.PAWN and c5_piece.color == chess.BLACK:
+                return {"name": "Sicilian Defense", "eco": "B20"}
+            elif board.piece_at(chess.E6) and board.piece_at(chess.E6).piece_type == chess.PAWN:
+                return {"name": "French Defense", "eco": "C00"}
+            elif board.piece_at(chess.C6) and board.piece_at(chess.C6).piece_type == chess.PAWN:
+                return {"name": "Caro-Kann Defense", "eco": "B10"}
+            else:
+                return {"name": "King's Pawn Opening", "eco": "C20"}
+        
+        # English Opening
+        c4_piece = board.piece_at(chess.C4)
+        if c4_piece and c4_piece.piece_type == chess.PAWN and c4_piece.color == chess.WHITE and not d4_piece:
+            return {"name": "English Opening", "eco": "A10"}
+        
+        # Réti Opening
+        f3_piece = board.piece_at(chess.F3)
+        g1_piece = board.piece_at(chess.G1)
+        if f3_piece and f3_piece.piece_type == chess.KNIGHT and f3_piece.color == chess.WHITE and not g1_piece:
+            return {"name": "Réti Opening", "eco": "A04"}
+        
+        # Default for opening phase
+        if move_number <= 3:
+            return {"name": "Opening Position", "eco": None}
+        
+        return {"name": None, "eco": None}
+        
+    except Exception as e:
+        return {"name": None, "eco": None}
 
 @app.options("/analyze-position")
 async def analyze_position_options():
@@ -130,8 +236,6 @@ async def analyze_position(request: dict):
     try:
         import chess
         import chess.engine
-        print(f"DEBUG: Analyzing FEN: {fen}")  # Debug log
-        
         # Create board from FEN
         board = chess.Board(fen)
         
@@ -139,14 +243,19 @@ async def analyze_position(request: dict):
         stockfish_analysis = None
         if chess_engine_service and chess_engine_service.is_initialized:
             try:
-                print("Using Stockfish for analysis...")
                 stockfish_analysis = await chess_engine_service.analyze_position(fen, depth=20)
-                print(f"Stockfish analysis complete: {stockfish_analysis['best_moves'][0] if stockfish_analysis.get('best_moves') else 'No moves'}")
             except Exception as e:
-                print(f"Stockfish analysis failed: {e}, using fallback")
                 stockfish_analysis = None
-        else:
-            print("Stockfish not available, using fallback analysis")
+        
+        # Use ML Tactical Classifier for enhanced tactical detection (Phase 2)
+        ml_tactical_themes = []
+        if tactical_analysis_service and tactical_analysis_service.is_available:
+            try:
+                tactical_result = await tactical_analysis_service.analyze_tactics(board, threshold=0.3)
+                if tactical_result.get('available') and tactical_result.get('themes'):
+                    ml_tactical_themes = tactical_result['themes']
+            except Exception as e:
+                pass  # ML analysis failed, continue without it
         
         # Basic position analysis
         material_balance = 0
@@ -211,6 +320,13 @@ async def analyze_position(request: dict):
             if material_balance != 0:
                 tactical_motifs.append("material_advantage")
         
+        # Add ML-detected tactical themes to motifs
+        if ml_tactical_themes:
+            for theme_info in ml_tactical_themes:
+                theme_name = theme_info['theme']
+                if theme_name not in tactical_motifs:
+                    tactical_motifs.append(theme_name)
+        
         # Strategic concepts based on position
         if position_type == "opening":
             strategic_concepts.append("development")
@@ -232,7 +348,6 @@ async def analyze_position(request: dict):
         score_value = 100
     except Exception as e:
         # Handle any other errors
-        print(f"DEBUG: Error analyzing position: {e}")  # Debug log
         return {
             "error": "Analysis failed",
             "message": f"Could not analyze position: {str(e)}"
@@ -254,9 +369,16 @@ async def analyze_position(request: dict):
             }
         ]
     
+        # Detect opening if in opening phase
+        opening_info = {"name": None, "eco": None}
+        if position_type == "opening" and best_moves_response:
+            pv_moves = best_moves_response[0].get('pv', [])
+            opening_info = detect_opening(fen, pv_moves)
+    
     return {
         "fen": fen,
         "best_moves": best_moves_response,
+        "opening_info": opening_info,
         "explanations": [
             {
                 "move": best_move,
@@ -274,13 +396,18 @@ async def analyze_position(request: dict):
                 }
             }
         ],
-            "position_evaluation": {
-                "score": {"type": "cp", "value": score_value, "display": f"{score_value/100:+.2f}"},
-                "position_type": position_type,
-                "material_balance": stockfish_analysis['evaluation']['material_balance'] if stockfish_analysis else {"white": 39 + material_balance, "black": 39 - material_balance, "difference": material_balance},
-                "king_safety": stockfish_analysis['evaluation']['king_safety'] if stockfish_analysis else {"white": 8, "black": 8},
-                "piece_activity": stockfish_analysis['evaluation']['piece_activity'] if stockfish_analysis else {"white": 12, "black": 12}
-            },
+        "position_evaluation": {
+            "score": {"type": "cp", "value": score_value, "display": f"{score_value/100:+.2f}"},
+            "position_type": position_type,
+            "material_balance": stockfish_analysis['evaluation']['material_balance'] if stockfish_analysis else {"white": 39 + material_balance, "black": 39 - material_balance, "difference": material_balance},
+            "king_safety": stockfish_analysis['evaluation']['king_safety'] if stockfish_analysis else {"white": 8, "black": 8},
+            "piece_activity": stockfish_analysis['evaluation']['piece_activity'] if stockfish_analysis else {"white": 12, "black": 12}
+        },
+        "ml_tactical_analysis": {
+            "available": len(ml_tactical_themes) > 0,
+            "themes": ml_tactical_themes,
+            "model": "PyTorch CNN (Phase 2)" if ml_tactical_themes else None
+        },
         "learning_insights": [
             f"Current turn: {turn}",
             f"Position type: {position_type}",

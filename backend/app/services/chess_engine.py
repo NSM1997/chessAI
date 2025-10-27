@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 import platform
 import os
-from app.core.config import settings
+# Removed config import - using direct path detection
 
 logger = logging.getLogger(__name__)
 
@@ -21,12 +21,8 @@ class ChessEngineService:
         self.is_initialized = False
         
     def _find_stockfish_executable(self) -> Optional[str]:
-        """Find Stockfish executable path using configuration"""
-        # Use configured path first
-        configured_path = settings.get_stockfish_path()
-        
+        """Find Stockfish executable path"""
         possible_paths = [
-            configured_path,  # Configured path first priority
             # Direct paths from project root
             "stockfish/stockfish-windows-x86-64-avx2.exe",
             "stockfish.exe",

@@ -22,11 +22,12 @@ app.add_middleware(
 # Global service instances
 chess_engine_service = None
 tactical_analysis_service = None
+nlp_explanation_service = None
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize chess engine and tactical classifier on startup"""
-    global chess_engine_service, tactical_analysis_service
+    """Initialize chess engine, tactical classifier, and NLP explanation service on startup"""
+    global chess_engine_service, tactical_analysis_service, nlp_explanation_service
     
     # Initialize Stockfish engine
     try:
@@ -60,13 +61,33 @@ async def startup_event():
     except Exception as e:
         print(f"[ERROR] Failed to initialize tactical classifier: {e}")
         tactical_analysis_service = None
+    
+    # Initialize NLP explanation service (Phase 3)
+    try:
+        from app.services.nlp_explanation import NLPExplanationService
+        
+        # Use the fine-tuned model
+        nlp_explanation_service = NLPExplanationService(model_type="t5", model_name="models/chess_t5_finetuned")
+        await nlp_explanation_service.initialize()
+        
+        if nlp_explanation_service.is_available:
+            print("[SUCCESS] NLP explanation service initialized successfully!")
+        else:
+            print("[WARNING] NLP explanation service not available (using fallback explanations)")
+    except Exception as e:
+        print(f"[ERROR] Failed to initialize NLP explanation service: {e}")
+        nlp_explanation_service = None
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Cleanup on shutdown"""
-    global chess_engine_service
+    global chess_engine_service, nlp_explanation_service
+    
     if chess_engine_service:
         await chess_engine_service.cleanup()
+    
+    if nlp_explanation_service:
+        await nlp_explanation_service.cleanup()
 
 @app.get("/")
 async def root():
@@ -218,7 +239,7 @@ async def analyze_position(request: dict):
     turn = "White" if active_color == "w" else "Black"
     
     # Determine position type based on FEN and piece analysis
-    position_type = "opening"  # Default - Updated logic v2
+    position_type = "middlegame"  # Default to middlegame instead of opening
     
     # Check if it's the starting position
     if "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR" in fen:
@@ -239,6 +260,14 @@ async def analyze_position(request: dict):
             # Count minor pieces (knights and bishops)
             minor_pieces = len([p for p in board.piece_map().values() if p.piece_type in [chess.KNIGHT, chess.BISHOP]])
             
+            # Get move number for position type determination
+            move_number = 0
+            if len(fen_parts) > 5:
+                try:
+                    move_number = int(fen_parts[5])
+                except (ValueError, IndexError):
+                    move_number = 0
+            
             # Determine position type based on piece count and structure
             if piece_count <= 12:  # Very few pieces left
                 position_type = "endgame"
@@ -246,23 +275,26 @@ async def analyze_position(request: dict):
                 position_type = "endgame"
             elif piece_count <= 24 and minor_pieces <= 4:  # Reduced material
                 position_type = "endgame"
-            elif piece_count >= 30 and pawns >= 12:  # Many pieces and pawns
+            elif piece_count >= 30 and pawns >= 12 and move_number <= 8:  # Many pieces and pawns in early game
                 position_type = "opening"
             elif piece_count >= 24:  # Good amount of pieces
                 position_type = "middlegame"
             else:
                 position_type = "middlegame"
+            
+            # Debug: Print position analysis
+            print(f"[DEBUG] Position analysis: pieces={piece_count}, queens={queens}, pawns={pawns}, minor={minor_pieces}, type={position_type}")
                 
-            # Override with move number if available and reasonable
+            # Override with move number only if piece analysis suggests endgame
             if len(fen_parts) > 5:
                 try:
                     move_number = int(fen_parts[5])
+                    print(f"[DEBUG] Move number: {move_number}, current type: {position_type}")
                     if move_number > 50:
                         position_type = "endgame"
                     elif move_number > 25:
                         position_type = "middlegame"
-                    elif move_number <= 3:
-                        position_type = "opening"
+                    # Don't force opening for early moves - let piece analysis decide
                 except (ValueError, IndexError):
                     pass  # Keep the piece-based analysis
                     
@@ -326,11 +358,19 @@ async def analyze_position(request: dict):
             san_move = best_move_info['san']
             score_value = best_move_info['score']['value']
             
-            # Use the detailed explanation from the engine if available
-            if stockfish_analysis.get('move_explanations'):
-                explanation = stockfish_analysis['move_explanations'][0]['explanation']
-            else:
-                # Fallback to simple explanation
+            # Generate explanation using improved fallback system
+            try:
+                explanation = nlp_explanation_service._fallback_explanation(
+                    move_san=san_move,
+                    position_eval={
+                        'score': best_move_info['score'],
+                        'position_type': position_type,
+                        'material_balance': stockfish_analysis.get('evaluation', {}).get('material_balance', {})
+                    },
+                    tactical_themes=[theme['theme'] for theme in ml_tactical_themes] if ml_tactical_themes else []
+                )
+            except Exception as e:
+                print(f"[WARNING] Explanation generation failed: {e}, using simple fallback")
                 explanation = f"It's {turn}'s turn. The best move is {san_move} (evaluation: {score_value/100:+.2f})."
         else:
             # Fallback: use legal moves

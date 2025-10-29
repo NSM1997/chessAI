@@ -14,4 +14,8 @@ stockfish/
 *.so
 
 # Env files
-.env
+.envmodels/**/checkpoint-*/optimizer.pt
+models/**/checkpoint-*/scheduler.pt
+models/**/checkpoint-*/rng_state.pth
+models/**/checkpoint-*/trainer_state.json
+models/**/checkpoint-*

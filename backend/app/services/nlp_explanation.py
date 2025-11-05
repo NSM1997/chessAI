@@ -75,13 +75,68 @@ class NLPExplanationService:
     
     async def _initialize_t5(self):
         """Initialize T5 model and tokenizer."""
+        # Check if model path exists (for local models)
+        model_path = Path(self.model_name)
+        original_model_name = self.model_name
+        
+        if not model_path.exists():
+            raise FileNotFoundError(f"Model directory not found: {model_path}")
+        
+        # Check if model files exist
+        config_file = model_path / "config.json"
+        if not config_file.exists():
+            raise FileNotFoundError(f"Model config.json not found in {model_path}")
+        
+        # Find available checkpoints
+        checkpoint_dirs = sorted([d for d in model_path.iterdir() if d.is_dir() and d.name.startswith("checkpoint-")])
+        
         # Run in thread pool to avoid blocking
         loop = asyncio.get_event_loop()
         
         def _load_t5():
-            tokenizer = T5Tokenizer.from_pretrained(self.model_name)
-            model = T5ForConditionalGeneration.from_pretrained(self.model_name)
-            return model, tokenizer
+            # Try loading from main directory first
+            model_paths_to_try = [original_model_name]
+            
+            # If there are checkpoints, add them as fallback options
+            if checkpoint_dirs:
+                # Try latest checkpoint first
+                for checkpoint in reversed(checkpoint_dirs):
+                    model_paths_to_try.append(str(checkpoint))
+            
+            last_error = None
+            for model_path_str in model_paths_to_try:
+                try:
+                    logger.info(f"Attempting to load model from: {model_path_str}")
+                    tokenizer = T5Tokenizer.from_pretrained(model_path_str, legacy=False)
+                    
+                    # Try loading with use_safetensors=False first (if safetensors is corrupted)
+                    try:
+                        model = T5ForConditionalGeneration.from_pretrained(
+                            model_path_str, 
+                            use_safetensors=False
+                        )
+                        logger.info(f"Successfully loaded model (using PyTorch format)")
+                    except Exception as safetensors_error:
+                        # If that fails, try default (which will use safetensors if available)
+                        logger.warning(f"PyTorch format failed, trying default: {safetensors_error}")
+                        model = T5ForConditionalGeneration.from_pretrained(model_path_str)
+                    
+                    logger.info(f"Successfully loaded fine-tuned model from {model_path_str}")
+                    self.model_name = model_path_str  # Update to reflect actual model used
+                    return model, tokenizer
+                except Exception as e:
+                    last_error = e
+                    error_msg = str(e)
+                    if "header too large" in error_msg.lower():
+                        logger.error(f"CRITICAL: Safetensors file appears corrupted at {model_path_str}")
+                        logger.error("This usually means the model files were not saved correctly or are corrupted.")
+                        logger.error("You may need to re-train or re-save the model.")
+                    else:
+                        logger.warning(f"Failed to load from {model_path_str}: {e}")
+                    continue  # Try next path
+            
+            # If all paths failed, raise error
+            raise RuntimeError(f"Could not load fine-tuned model from any available location. Last error: {last_error}")
         
         self.model, self.tokenizer = await loop.run_in_executor(None, _load_t5)
         

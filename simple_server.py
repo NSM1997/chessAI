@@ -65,18 +65,26 @@ async def startup_event():
     # Initialize NLP explanation service (Phase 3)
     try:
         from app.services.nlp_explanation import NLPExplanationService
+        from pathlib import Path
         
-        # Use the fine-tuned model
-        nlp_explanation_service = NLPExplanationService(model_type="t5", model_name="models/chess_t5_finetuned")
-        await nlp_explanation_service.initialize()
+        # Get absolute path to models directory (in root folder)
+        script_dir = Path(__file__).parent.absolute()
+        model_path = script_dir / "models" / "chess_t5_finetuned"
+        
+        # Load fine-tuned model - no fallback, must use fine-tuned model
+        print(f"[INFO] Loading fine-tuned model from: {model_path}")
+        nlp_explanation_service = NLPExplanationService(model_type="t5", model_name=str(model_path))
+        success = await nlp_explanation_service.initialize()
         
         if nlp_explanation_service.is_available:
-            print("[SUCCESS] NLP explanation service initialized successfully!")
+            print("[SUCCESS] Fine-tuned NLP explanation service initialized successfully!")
         else:
-            print("[WARNING] NLP explanation service not available (using fallback explanations)")
+            print("[ERROR] Fine-tuned NLP explanation service failed to initialize!")
+            raise RuntimeError("Fine-tuned model initialization failed")
     except Exception as e:
-        print(f"[ERROR] Failed to initialize NLP explanation service: {e}")
-        nlp_explanation_service = None
+        print(f"[ERROR] Failed to initialize fine-tuned NLP explanation service: {e}")
+        print("[ERROR] Cannot proceed without fine-tuned model. Please check the model files.")
+        raise  # Re-raise to stop server startup if model fails
 
 @app.on_event("shutdown")
 async def shutdown_event():

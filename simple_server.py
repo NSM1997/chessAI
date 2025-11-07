@@ -84,8 +84,8 @@ async def startup_event():
             print("[INFO] OpenAI API key found, initializing GPT-4...")
             llm_explanation_service = LLMExplanationService(provider="openai-gpt4", api_key=api_key)
         else:
-            print("[INFO] No API key found, using intelligent fallback mode")
-            llm_explanation_service = LLMExplanationService(provider="fallback")
+            print("[INFO] No API key found, using Ollama with llama3.2")
+            llm_explanation_service = LLMExplanationService(provider="ollama-local")
         
         success = await llm_explanation_service.initialize()
         

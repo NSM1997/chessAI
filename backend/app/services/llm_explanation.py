@@ -117,7 +117,7 @@ class LLMExplanationService:
             models = ollama.list()
             self.client = ollama
             self.is_available = True
-            logger.info(f"Ollama initialized with {len(models)} models")
+            logger.info("Ollama initialized successfully")
             
         except ImportError:
             raise ImportError("ollama package not installed. Run: pip install ollama")
@@ -192,83 +192,31 @@ class LLMExplanationService:
         Build intelligent prompt with all context.
         """
         # Extract key information
-        hanging_pieces = board_analysis.get('hanging_pieces', [])
-        threats = board_analysis.get('threats', [])
-        
-        creates_attacks = move_impact.get('creates_attacks', [])
-        removes_threats = move_impact.get('removes_threats', [])
-        defends_pieces = move_impact.get('defends_pieces', [])
-        tactical_purpose = move_impact.get('tactical_purpose', [])
         is_capture = move_impact.get('is_capture', False)
         is_check = move_impact.get('is_check', False)
-        
-        # Get piece names
         moving_piece = self.piece_names.get(move_impact.get('moving_piece'), 'piece')
         captured_piece = self.piece_names.get(move_impact.get('captured_piece'), 'piece') if is_capture else None
         
-        # Build context string
+        # Build only meaningful context - ONLY include actual facts
         context_parts = []
         
-        # Position context
-        context_parts.append(f"Game Phase: {position_type}")
-        
-        # Threats before move
-        if threats:
-            threat_desc = []
-            for threat in threats[:2]:  # Top 2 threats
-                if threat['type'] == 'hanging_piece':
-                    threat_desc.append(f"{self.piece_names.get(threat.get('piece'), 'piece')} on {threat.get('square')} is undefended")
-            if threat_desc:
-                context_parts.append(f"Threats: {'; '.join(threat_desc)}")
-        
-        # What the move does
-        move_actions = []
-        
+        # Only include what's actually happening
         if is_capture:
-            move_actions.append(f"captures {captured_piece}")
-        
-        if removes_threats:
-            move_actions.append("removes a threat")
-        
-        if creates_attacks and len(creates_attacks) > 0:
-            target_squares = ', '.join(creates_attacks[:2])
-            move_actions.append(f"attacks pieces on {target_squares}")
-        
-        if defends_pieces and len(defends_pieces) > 0:
-            defended_squares = ', '.join(defends_pieces[:2])
-            move_actions.append(f"defends pieces on {defended_squares}")
+            context_parts.append(f"it captures the {captured_piece}")
         
         if is_check:
-            move_actions.append("gives check")
+            context_parts.append("it gives check")
         
-        if move_actions:
-            context_parts.append(f"Move actions: {'; '.join(move_actions)}")
+        # DON'T include tactical themes - they're often wrong and cause hallucinations
         
-        # Tactical themes
-        if tactical_themes:
-            context_parts.append(f"Tactical themes: {', '.join(tactical_themes[:3])}")
-        
-        # Evaluation
-        score = stockfish_eval.get('value', 0)
-        context_parts.append(f"Evaluation: {score/100:+.2f}")
-        
-        # Build final prompt
-        prompt = f"""You are a friendly chess coach explaining moves to students. Explain why this move is played.
+        # Build simple, factual prompt
+        if context_parts:
+            prompt = f"""Complete this: "{move_san} is a strong move because {context_parts[0]}."
 
-Position FEN: {fen}
-Move: {move_san} (moving {moving_piece})
-
-Context:
-{chr(10).join(f"- {part}" for part in context_parts)}
-
-Instructions:
-1. Explain the move in 2-3 clear sentences
-2. Focus on what the move actually accomplishes (refer to the move actions above)
-3. Use natural, coach-like language (e.g., "This move...", "By playing this...")
-4. Be specific about squares and pieces when relevant
-5. If the move defends/attacks/captures, explain why that matters
-
-Generate explanation:"""
+Just complete the sentence naturally in 5-10 words. Be specific and accurate."""
+        else:
+            # For normal positional moves
+            prompt = f"""In one short sentence, explain the main purpose of the move {move_san} in this {position_type} position. Focus on development, center control, piece activity, or king safety. Be specific and concise (max 15 words)."""
 
         return prompt
     
@@ -316,8 +264,13 @@ Generate explanation:"""
         
         def _call_ollama():
             response = self.client.generate(
-                model='llama2',  # or 'mistral', 'codellama', etc.
-                prompt=prompt
+                model='llama3.2',
+                prompt=prompt,
+                options={
+                    'num_predict': 50,  # Limit to ~50 tokens (1-2 sentences)
+                    'temperature': 0.5,  # Lower temp for more focused output
+                    'top_p': 0.9
+                }
             )
             
             return response['response'].strip()

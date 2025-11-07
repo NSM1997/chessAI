@@ -1,0 +1,14 @@
+# LLM Provider Dependencies
+# Install with: pip install -r requirements-llm.txt
+
+# OpenAI GPT-4/GPT-3.5
+openai>=1.0.0
+
+# Anthropic Claude (optional)
+# anthropic>=0.8.0
+
+# Ollama local LLM (optional)
+# ollama>=0.1.0
+
+# Core dependencies (if not already installed)
+python-chess>=1.999

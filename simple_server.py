@@ -22,12 +22,13 @@ app.add_middleware(
 # Global service instances
 chess_engine_service = None
 tactical_analysis_service = None
-nlp_explanation_service = None
+llm_explanation_service = None
+board_analyzer = None
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize chess engine, tactical classifier, and NLP explanation service on startup"""
-    global chess_engine_service, tactical_analysis_service, nlp_explanation_service
+    """Initialize chess engine, tactical classifier, board analyzer, and LLM explanation service on startup"""
+    global chess_engine_service, tactical_analysis_service, llm_explanation_service, board_analyzer
     
     # Initialize Stockfish engine
     try:
@@ -62,40 +63,55 @@ async def startup_event():
         print(f"[ERROR] Failed to initialize tactical classifier: {e}")
         tactical_analysis_service = None
     
-    # Initialize NLP explanation service (Phase 3)
+    # Initialize Board Analyzer (Phase 3: Path B)
     try:
-        from app.services.nlp_explanation import NLPExplanationService
-        from pathlib import Path
+        from app.services.board_analyzer import BoardAnalyzer
         
-        # Get absolute path to models directory (in root folder)
-        script_dir = Path(__file__).parent.absolute()
-        model_path = script_dir / "models" / "chess_t5_finetuned"
-        
-        # Load fine-tuned model - no fallback, must use fine-tuned model
-        print(f"[INFO] Loading fine-tuned model from: {model_path}")
-        nlp_explanation_service = NLPExplanationService(model_type="t5", model_name=str(model_path))
-        success = await nlp_explanation_service.initialize()
-        
-        if nlp_explanation_service.is_available:
-            print("[SUCCESS] Fine-tuned NLP explanation service initialized successfully!")
-        else:
-            print("[ERROR] Fine-tuned NLP explanation service failed to initialize!")
-            raise RuntimeError("Fine-tuned model initialization failed")
+        board_analyzer = BoardAnalyzer()
+        print("[SUCCESS] Board analyzer initialized successfully!")
     except Exception as e:
-        print(f"[ERROR] Failed to initialize fine-tuned NLP explanation service: {e}")
-        print("[ERROR] Cannot proceed without fine-tuned model. Please check the model files.")
-        raise  # Re-raise to stop server startup if model fails
+        print(f"[ERROR] Failed to initialize board analyzer: {e}")
+        board_analyzer = None
+    
+    # Initialize LLM Explanation Service (Phase 3: Path B)
+    try:
+        from app.services.llm_explanation import LLMExplanationService
+        import os
+        
+        # Check if API key is available
+        api_key = os.getenv("OPENAI_API_KEY")
+        if api_key:
+            print("[INFO] OpenAI API key found, initializing GPT-4...")
+            llm_explanation_service = LLMExplanationService(provider="openai-gpt4", api_key=api_key)
+        else:
+            print("[INFO] No API key found, using intelligent fallback mode")
+            llm_explanation_service = LLMExplanationService(provider="fallback")
+        
+        success = await llm_explanation_service.initialize()
+        
+        if success:
+            print(f"[SUCCESS] LLM explanation service initialized (provider: {llm_explanation_service.provider.value})!")
+        else:
+            print("[WARNING] LLM explanation service failed to initialize, using fallback")
+    except Exception as e:
+        print(f"[ERROR] Failed to initialize LLM explanation service: {e}")
+        print("[INFO] Using fallback explanation system")
+        try:
+            llm_explanation_service = LLMExplanationService(provider="fallback")
+            await llm_explanation_service.initialize()
+        except:
+            llm_explanation_service = None
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Cleanup on shutdown"""
-    global chess_engine_service, nlp_explanation_service
+    global chess_engine_service, llm_explanation_service
     
     if chess_engine_service:
         await chess_engine_service.cleanup()
     
-    if nlp_explanation_service:
-        await nlp_explanation_service.cleanup()
+    if llm_explanation_service:
+        await llm_explanation_service.cleanup()
 
 @app.get("/")
 async def root():
@@ -366,32 +382,31 @@ async def analyze_position(request: dict):
             san_move = best_move_info['san']
             score_value = best_move_info['score']['value']
             
-            # Generate explanation using fine-tuned NLP model
+            # Generate intelligent explanation using Board Analyzer + LLM (Phase 3: Path B)
             try:
-                if nlp_explanation_service and nlp_explanation_service.is_available:
-                    explanation = await nlp_explanation_service.generate_explanation(
+                if board_analyzer and llm_explanation_service:
+                    # Step 1: Analyze board position
+                    board_analysis = board_analyzer.analyze_position(board)
+                    
+                    # Step 2: Analyze move impact
+                    move_obj = chess.Move.from_uci(best_move)
+                    move_impact = board_analyzer.analyze_move_impact(board, move_obj)
+                    
+                    # Step 3: Generate context-aware explanation
+                    explanation = await llm_explanation_service.generate_explanation(
                         fen=fen,
-                        move=best_move,
                         move_san=san_move,
-                        position_eval={
-                            'score': best_move_info['score'],
-                            'position_type': position_type,
-                            'material_balance': stockfish_analysis.get('evaluation', {}).get('material_balance', {})
-                        },
+                        move_uci=best_move,
+                        board_analysis=board_analysis,
+                        move_impact=move_impact,
+                        stockfish_eval=best_move_info['score'],
                         tactical_themes=[theme['theme'] for theme in ml_tactical_themes] if ml_tactical_themes else [],
-                        opening_info=opening_info
+                        position_type=position_type
                     )
+                    
+                    print(f"[INFO] Generated intelligent explanation for {san_move}")
                 else:
-                    # Use fallback if model not available
-                    explanation = nlp_explanation_service._fallback_explanation(
-                        move_san=san_move,
-                        position_eval={
-                            'score': best_move_info['score'],
-                            'position_type': position_type,
-                            'material_balance': stockfish_analysis.get('evaluation', {}).get('material_balance', {})
-                        },
-                        tactical_themes=[theme['theme'] for theme in ml_tactical_themes] if ml_tactical_themes else []
-                    )
+                    explanation = f"It's {turn}'s turn. The best move is {san_move} (evaluation: {score_value/100:+.2f})."
             except Exception as e:
                 print(f"[WARNING] Explanation generation failed: {e}, using simple fallback")
                 explanation = f"It's {turn}'s turn. The best move is {san_move} (evaluation: {score_value/100:+.2f})."

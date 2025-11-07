@@ -233,61 +233,29 @@ class NLPExplanationService:
         """Prepare input text for the language model."""
         
         position_type = position_eval.get('position_type', 'unknown')
-        score = position_eval.get('score', {})
-        score_value = score.get('value', 0) if isinstance(score, dict) else score
         
-        # Create more detailed and context-aware input
-        input_parts = [
-            f"Position: {fen}",
-            f"Move: {move_san} ({move})",
-            f"Score: {score_value/100:+.2f}",
-            f"Phase: {position_type}"
-        ]
+        # Match the exact format used during training:
+        # "Chess position: {fen} | Move: {move_san} ({move}) | Type: {position_type}"
+        input_text = f"Chess position: {fen} | Move: {move_san} ({move}) | Type: {position_type}"
         
-        # Add opening information
-        if opening_info and opening_info.get('name'):
-            input_parts.append(f"Opening: {opening_info['name']}")
+        # Add tactical theme if available
+        if tactical_themes and len(tactical_themes) > 0:
+            tactic_str = ", ".join(tactical_themes[:2])  # Use first 2 tactics
+            input_text += f" | Tactic: {tactic_str}"
         
-        # Add tactical themes with more context
-        if tactical_themes:
-            themes_str = ", ".join(tactical_themes)
-            input_parts.append(f"Tactics: {themes_str}")
-        
-        # Add material balance
-        material = position_eval.get('material_balance', {})
-        if material:
-            diff = material.get('difference', 0)
-            if diff > 0:
-                input_parts.append(f"Material: White +{abs(diff)}")
-            elif diff < 0:
-                input_parts.append(f"Material: Black +{abs(diff)}")
-            else:
-                input_parts.append("Material: Equal")
-        
-        # Add move-specific context
-        if move_san.startswith('N'):
-            input_parts.append("Piece: Knight")
-        elif move_san.startswith('B'):
-            input_parts.append("Piece: Bishop")
-        elif move_san.startswith('R'):
-            input_parts.append("Piece: Rook")
-        elif move_san.startswith('Q'):
-            input_parts.append("Piece: Queen")
-        elif move_san.startswith('K'):
-            input_parts.append("Piece: King")
-        else:
-            input_parts.append("Piece: Pawn")
-        
-        return " | ".join(input_parts)
+        return input_text
     
     async def _generate_t5_explanation(self, input_text: str) -> str:
         """Generate explanation using T5 model."""
         loop = asyncio.get_event_loop()
         
         def _t5_generate():
+            # Add T5 task prefix to match training format
+            prefixed_input = f"explain chess move: {input_text}"
+            
             # Tokenize input
             inputs = self.tokenizer(
-                input_text,
+                prefixed_input,
                 return_tensors="pt",
                 max_length=512,
                 truncation=True,
@@ -302,7 +270,7 @@ class NLPExplanationService:
             with torch.no_grad():
                 outputs = self.model.generate(
                     **inputs,
-                    max_length=200,
+                    max_length=128,  # Match training max_length
                     num_beams=4,
                     early_stopping=True,
                     do_sample=True,

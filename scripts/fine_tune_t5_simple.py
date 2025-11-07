@@ -36,9 +36,12 @@ class ChessExplanationDataset(Dataset):
     def __getitem__(self, idx):
         example = self.data[idx]
         
+        # Add T5 task prefix
+        input_text = f"explain chess move: {example['input']}"
+        
         # Tokenize input and output
         input_encoding = self.tokenizer(
-            example['input'],
+            input_text,
             max_length=self.max_length,
             padding='max_length',
             truncation=True,
@@ -47,7 +50,7 @@ class ChessExplanationDataset(Dataset):
         
         output_encoding = self.tokenizer(
             example['output'],
-            max_length=64,  # Shorter for explanations
+            max_length=128,  # Longer for natural, coach-like explanations
             padding='max_length',
             truncation=True,
             return_tensors='pt'
@@ -171,7 +174,7 @@ def test_model(model, tokenizer, test_examples):
         with torch.no_grad():
             outputs = model.generate(
                 **inputs,
-                max_length=64,
+                max_length=128,
                 num_beams=4,
                 early_stopping=True,
                 do_sample=True,
@@ -189,20 +192,20 @@ def test_model(model, tokenizer, test_examples):
 
 def main():
     """Main function."""
-    data_file = "data/chess_explanations_high_quality.json"
+    data_file = "data/chess_explanations_natural.json"
     
     if not os.path.exists(data_file):
         print(f"Training data file {data_file} not found!")
-        print("Please run create_chess_training_data.py first.")
+        print("Please run create_natural_explanations.py first.")
         return
     
     # Fine-tune model
     model, tokenizer = fine_tune_t5_model(
         data_file=data_file,
         output_dir="models/chess_t5_finetuned",
-        num_epochs=3,
+        num_epochs=5,  # Fewer epochs with larger dataset
         batch_size=4,  # Smaller batch size for memory
-        learning_rate=5e-5
+        learning_rate=3e-5  # Slightly lower learning rate for fine details
     )
     
     print("\nFine-tuning completed successfully!")

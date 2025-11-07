@@ -366,17 +366,32 @@ async def analyze_position(request: dict):
             san_move = best_move_info['san']
             score_value = best_move_info['score']['value']
             
-            # Generate explanation using improved fallback system
+            # Generate explanation using fine-tuned NLP model
             try:
-                explanation = nlp_explanation_service._fallback_explanation(
-                    move_san=san_move,
-                    position_eval={
-                        'score': best_move_info['score'],
-                        'position_type': position_type,
-                        'material_balance': stockfish_analysis.get('evaluation', {}).get('material_balance', {})
-                    },
-                    tactical_themes=[theme['theme'] for theme in ml_tactical_themes] if ml_tactical_themes else []
-                )
+                if nlp_explanation_service and nlp_explanation_service.is_available:
+                    explanation = await nlp_explanation_service.generate_explanation(
+                        fen=fen,
+                        move=best_move,
+                        move_san=san_move,
+                        position_eval={
+                            'score': best_move_info['score'],
+                            'position_type': position_type,
+                            'material_balance': stockfish_analysis.get('evaluation', {}).get('material_balance', {})
+                        },
+                        tactical_themes=[theme['theme'] for theme in ml_tactical_themes] if ml_tactical_themes else [],
+                        opening_info=opening_info
+                    )
+                else:
+                    # Use fallback if model not available
+                    explanation = nlp_explanation_service._fallback_explanation(
+                        move_san=san_move,
+                        position_eval={
+                            'score': best_move_info['score'],
+                            'position_type': position_type,
+                            'material_balance': stockfish_analysis.get('evaluation', {}).get('material_balance', {})
+                        },
+                        tactical_themes=[theme['theme'] for theme in ml_tactical_themes] if ml_tactical_themes else []
+                    )
             except Exception as e:
                 print(f"[WARNING] Explanation generation failed: {e}, using simple fallback")
                 explanation = f"It's {turn}'s turn. The best move is {san_move} (evaluation: {score_value/100:+.2f})."

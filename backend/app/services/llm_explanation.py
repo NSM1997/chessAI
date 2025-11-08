@@ -243,13 +243,18 @@ class LLMExplanationService:
         if is_check:
             context_parts.append("gives check")
         
-        # Build concise prompt
-        prompt = f"""Explain the chess move {move_san} in ONE short sentence (max 20 words).
+        # Build enhanced prompt
+        prompt = f"""You are a chess coach. Explain the move {move_san} in this {position_type} position.
 
-Context:
+Key facts:
 {chr(10).join(f'- {part}' for part in context_parts)}
 
-If it's a fork/pin/skewer/discovered attack, mention that tactical pattern. Otherwise explain the main strategic purpose. Be direct and concise."""
+Explain in 2-3 sentences:
+1. What the move does tactically (if fork/pin/skewer, mention it!)
+2. Why it's strong strategically
+3. What it accomplishes
+
+Be specific and educational."""
 
         return prompt
     
@@ -264,10 +269,10 @@ If it's a fork/pin/skewer/discovered attack, mention that tactical pattern. Othe
             response = self.client.chat.completions.create(
                 model=model,
                 messages=[
-                    {"role": "system", "content": "You are a concise chess coach. Keep explanations to 1-2 short sentences maximum."},
+                    {"role": "system", "content": "You are a friendly chess coach."},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=50,  # Limit tokens for brevity
+                max_tokens=150,
                 temperature=0.7
             )
             

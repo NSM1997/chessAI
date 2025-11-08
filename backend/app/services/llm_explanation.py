@@ -195,27 +195,66 @@ class LLMExplanationService:
         is_check = move_impact.get('is_check', False)
         moving_piece = self.piece_names.get(move_impact.get('moving_piece'), 'piece')
         captured_piece = self.piece_names.get(move_impact.get('captured_piece'), 'piece') if is_capture else None
+        creates_attacks = move_impact.get('creates_attacks', [])
+        defends_pieces = move_impact.get('defends_pieces', [])
+        removes_threats = move_impact.get('removes_threats', [])
         
-        # Build only meaningful context - ONLY include actual facts
+        # Build context with tactical awareness
         context_parts = []
         
-        # Only include what's actually happening
+        # Add move action
         if is_capture:
-            context_parts.append(f"it captures the {captured_piece}")
+            context_parts.append(f"Captures {captured_piece}")
+        else:
+            context_parts.append(f"Moves {moving_piece} to {move_san[-2:] if len(move_san) >= 2 else 'new square'}")
+        
+        # Add tactical information if available
+        if tactical_themes:
+            # Map theme names to human-readable descriptions
+            theme_descriptions = {
+                'fork': 'creates a fork (attacking multiple pieces)',
+                'pin': 'creates a pin (trapping a piece)',
+                'skewer': 'creates a skewer (forcing piece movement)',
+                'discoveredAttack': 'unleashes a discovered attack',
+                'mate': 'threatens checkmate',
+                'mateIn1': 'delivers checkmate',
+                'mateIn2': 'forces checkmate in 2 moves',
+                'check': 'gives check',
+                'sacrifice': 'sacrifices material for attack',
+                'defensiveMove': 'defends against threats'
+            }
+            
+            for theme in tactical_themes[:2]:  # Use top 2 themes
+                if theme in theme_descriptions:
+                    context_parts.append(theme_descriptions[theme])
+        
+        # Add what the move accomplishes
+        if creates_attacks:
+            targets = ', '.join(creates_attacks[:2])
+            context_parts.append(f"attacks pieces on {targets}")
+        
+        if removes_threats:
+            context_parts.append("removes a threat")
+        
+        if defends_pieces:
+            defended = ', '.join(defends_pieces[:2])
+            context_parts.append(f"defends pieces on {defended}")
         
         if is_check:
-            context_parts.append("it gives check")
+            context_parts.append("gives check")
         
-        # DON'T include tactical themes - they're often wrong and cause hallucinations
-        
-        # Build simple, factual prompt
-        if context_parts:
-            prompt = f"""Complete this: "{move_san} is a strong move because {context_parts[0]}."
+        # Build enhanced prompt
+        prompt = f"""You are a chess coach. Explain the move {move_san} in this {position_type} position.
 
-Just complete the sentence naturally in 5-10 words. Be specific and accurate."""
-        else:
-            # For normal positional moves
-            prompt = f"""In one short sentence, explain the main purpose of the move {move_san} in this {position_type} position. Focus on development, center control, piece activity, or king safety. Be specific and concise (max 15 words)."""
+Key facts:
+{chr(10).join(f'- {part}' for part in context_parts)}
+
+Explain in 2-3 sentences:
+1. What the move does tactically (if fork/pin/skewer, mention it!)
+2. Why it's strong strategically
+3. What it accomplishes
+
+Be specific and educational."""
 
         return prompt
     

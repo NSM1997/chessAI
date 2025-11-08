@@ -1,0 +1,13 @@
+{
+  "fork": 2000,
+  "opening": 2000,
+  "short": 10000,
+  "pin": 2000,
+  "middlegame": 4000,
+  "backRankMate": 2000,
+  "endgame": 4000,
+  "mate": 2000,
+  "mateIn1": 2000,
+  "discoveredAttack": 2000,
+  "skewer": 2000
+}

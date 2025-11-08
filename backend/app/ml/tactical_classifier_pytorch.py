@@ -102,7 +102,11 @@ class ChessBoardDataset(Dataset):
             theme_labels: Array of shape (N, num_classes) - theme labels
         """
         # Convert to PyTorch tensors and transpose to (N, 12, 8, 8) for Conv2d
-        self.boards = torch.FloatTensor(board_tensors).permute(0, 3, 1, 2)
+        if board_tensors.shape[0] == 0:
+            # Handle empty dataset case: create an empty tensor with the expected shape
+            self.boards = torch.empty((0, 12, 8, 8), dtype=torch.float32)
+        else:
+            self.boards = torch.FloatTensor(board_tensors).permute(0, 3, 1, 2)
         self.labels = torch.FloatTensor(theme_labels)
     
     def __len__(self):

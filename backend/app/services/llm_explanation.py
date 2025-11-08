@@ -195,66 +195,24 @@ class LLMExplanationService:
         is_check = move_impact.get('is_check', False)
         moving_piece = self.piece_names.get(move_impact.get('moving_piece'), 'piece')
         captured_piece = self.piece_names.get(move_impact.get('captured_piece'), 'piece') if is_capture else None
-        creates_attacks = move_impact.get('creates_attacks', [])
-        defends_pieces = move_impact.get('defends_pieces', [])
-        removes_threats = move_impact.get('removes_threats', [])
         
-        # Build context with tactical awareness
-        context_parts = []
+        # Build simple, natural prompt - let GPT-4o use its chess knowledge
+        score = stockfish_eval.get('value', 0)
+        eval_text = f"{score/100:+.2f}"
         
-        # Add move action
+        # Create minimal context
         if is_capture:
-            context_parts.append(f"Captures {captured_piece}")
+            action = f"captures the {captured_piece}"
         else:
-            context_parts.append(f"Moves {moving_piece} to {move_san[-2:] if len(move_san) >= 2 else 'new square'}")
+            action = f"moves the {moving_piece}"
         
-        # Add tactical information if available
-        if tactical_themes:
-            # Map theme names to human-readable descriptions
-            theme_descriptions = {
-                'fork': 'creates a fork (attacking multiple pieces)',
-                'pin': 'creates a pin (trapping a piece)',
-                'skewer': 'creates a skewer (forcing piece movement)',
-                'discoveredAttack': 'unleashes a discovered attack',
-                'mate': 'threatens checkmate',
-                'mateIn1': 'delivers checkmate',
-                'mateIn2': 'forces checkmate in 2 moves',
-                'check': 'gives check',
-                'sacrifice': 'sacrifices material for attack',
-                'defensiveMove': 'defends against threats'
-            }
-            
-            for theme in tactical_themes[:2]:  # Use top 2 themes
-                if theme in theme_descriptions:
-                    context_parts.append(theme_descriptions[theme])
-        
-        # Add what the move accomplishes
-        if creates_attacks:
-            targets = ', '.join(creates_attacks[:2])
-            context_parts.append(f"attacks pieces on {targets}")
-        
-        if removes_threats:
-            context_parts.append("removes a threat")
-        
-        if defends_pieces:
-            defended = ', '.join(defends_pieces[:2])
-            context_parts.append(f"defends pieces on {defended}")
-        
-        if is_check:
-            context_parts.append("gives check")
-        
-        # Build enhanced prompt
-        prompt = f"""You are a chess coach. Explain the move {move_san} in this {position_type} position.
+        # Simple, natural prompt with length limit
+        prompt = f"""You are a chess coach. Explain why {move_san} is the best move in this {position_type} position.
 
-Key facts:
-{chr(10).join(f'- {part}' for part in context_parts)}
+Move: {move_san} {action}
+Evaluation: {eval_text}
 
-Explain in 2-3 sentences:
-1. What the move does tactically (if fork/pin/skewer, mention it!)
-2. Why it's strong strategically
-3. What it accomplishes
-
-Be specific and educational."""
+Explain in exactly 2 sentences (maximum 3 lines). Be concise but informative."""
 
         return prompt
     
@@ -269,10 +227,10 @@ Be specific and educational."""
             response = self.client.chat.completions.create(
                 model=model,
                 messages=[
-                    {"role": "system", "content": "You are a friendly chess coach."},
+                    {"role": "system", "content": "You are a concise chess coach. Explain in exactly 2 sentences, maximum 3 lines."},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=150,
+                max_tokens=80,  # Limit for conciseness
                 temperature=0.7
             )
             

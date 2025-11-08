@@ -84,28 +84,16 @@ async def startup_event():
         # Try 1: OpenAI GPT-4 (if API key available)
         api_key = os.getenv("OPENAI_API_KEY")
         if api_key:
-            print("[INFO] OpenAI API key found, testing GPT-4...")
+            print("[INFO] OpenAI API key found, testing GPT-4o (best model)...")
             try:
+                # Use GPT-4o (best balance of quality, speed, and cost)
                 llm_explanation_service = LLMExplanationService(provider="openai-gpt4", api_key=api_key)
                 success = await llm_explanation_service.initialize()
                 
-                if success:
-                    # Quick test to verify quota
-                    print("[INFO] Verifying OpenAI API access...")
-                    test_explanation = await llm_explanation_service.generate_explanation(
-                        fen="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-                        move_san="e4",
-                        move_uci="e2e4",
-                        board_analysis={'hanging_pieces': [], 'threats': []},
-                        move_impact={'is_capture': False, 'tactical_purpose': ['development']},
-                        stockfish_eval={'value': 30},
-                        tactical_themes=[],
-                        position_type="opening"
-                    )
-                    print(f"[SUCCESS] OpenAI GPT-4 initialized and working!")
-                    print(f"[TEST] Sample explanation: {test_explanation[:80]}...")
-                else:
+                if not success:
                     raise Exception("OpenAI initialization failed")
+                    
+                print("[SUCCESS] OpenAI initialized, ready to use!")
                     
             except Exception as e:
                 print(f"[WARNING] OpenAI GPT-4 failed: {e}")

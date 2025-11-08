@@ -224,7 +224,8 @@ Just complete the sentence naturally in 5-10 words. Be specific and accurate."""
         loop = asyncio.get_event_loop()
         
         def _call_openai():
-            model = "gpt-4" if self.provider == LLMProvider.OPENAI_GPT4 else "gpt-3.5-turbo"
+            # Use gpt-4o (latest and best model) for GPT-4 provider
+            model = "gpt-4o" if self.provider == LLMProvider.OPENAI_GPT4 else "gpt-3.5-turbo"
             
             response = self.client.chat.completions.create(
                 model=model,

@@ -80,13 +80,12 @@ class LLMExplanationService:
     async def _initialize_openai(self):
         """Initialize OpenAI client."""
         try:
-            import openai
+            from openai import OpenAI
             
             if not self.api_key:
                 raise ValueError("OpenAI API key not found. Set OPENAI_API_KEY environment variable.")
             
-            openai.api_key = self.api_key
-            self.client = openai
+            self.client = OpenAI(api_key=self.api_key)
             self.is_available = True
             logger.info(f"OpenAI {self.provider.value} initialized successfully")
             
@@ -227,7 +226,7 @@ Just complete the sentence naturally in 5-10 words. Be specific and accurate."""
         def _call_openai():
             model = "gpt-4" if self.provider == LLMProvider.OPENAI_GPT4 else "gpt-3.5-turbo"
             
-            response = self.client.ChatCompletion.create(
+            response = self.client.chat.completions.create(
                 model=model,
                 messages=[
                     {"role": "system", "content": "You are a friendly chess coach."},

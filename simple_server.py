@@ -74,28 +74,71 @@ async def startup_event():
         board_analyzer = None
     
     # Initialize LLM Explanation Service (Phase 3: Path B)
+    # Smart provider selection: OpenAI → Ollama → Fallback
     try:
         from app.services.llm_explanation import LLMExplanationService
         import os
         
-        # Check if API key is available
+        llm_explanation_service = None
+        
+        # Try 1: OpenAI GPT-4 (if API key available)
         api_key = os.getenv("OPENAI_API_KEY")
         if api_key:
-            print("[INFO] OpenAI API key found, initializing GPT-4...")
-            llm_explanation_service = LLMExplanationService(provider="openai-gpt4", api_key=api_key)
-        else:
-            print("[INFO] No API key found, using Ollama with llama3.2")
-            llm_explanation_service = LLMExplanationService(provider="ollama-local")
+            print("[INFO] OpenAI API key found, testing GPT-4...")
+            try:
+                llm_explanation_service = LLMExplanationService(provider="openai-gpt4", api_key=api_key)
+                success = await llm_explanation_service.initialize()
+                
+                if success:
+                    # Quick test to verify quota
+                    print("[INFO] Verifying OpenAI API access...")
+                    test_explanation = await llm_explanation_service.generate_explanation(
+                        fen="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                        move_san="e4",
+                        move_uci="e2e4",
+                        board_analysis={'hanging_pieces': [], 'threats': []},
+                        move_impact={'is_capture': False, 'tactical_purpose': ['development']},
+                        stockfish_eval={'value': 30},
+                        tactical_themes=[],
+                        position_type="opening"
+                    )
+                    print(f"[SUCCESS] OpenAI GPT-4 initialized and working!")
+                    print(f"[TEST] Sample explanation: {test_explanation[:80]}...")
+                else:
+                    raise Exception("OpenAI initialization failed")
+                    
+            except Exception as e:
+                print(f"[WARNING] OpenAI GPT-4 failed: {e}")
+                if "insufficient_quota" in str(e) or "429" in str(e):
+                    print("[INFO] Quota exceeded - falling back to local LLM")
+                llm_explanation_service = None
         
-        success = await llm_explanation_service.initialize()
+        # Try 2: Ollama (local LLM)
+        if llm_explanation_service is None:
+            print("[INFO] Trying Ollama local LLM...")
+            try:
+                llm_explanation_service = LLMExplanationService(provider="ollama-local")
+                success = await llm_explanation_service.initialize()
+                
+                if success:
+                    print("[SUCCESS] Ollama local LLM initialized successfully!")
+                else:
+                    raise Exception("Ollama initialization failed")
+                    
+            except Exception as e:
+                print(f"[WARNING] Ollama failed: {e}")
+                llm_explanation_service = None
         
-        if success:
-            print(f"[SUCCESS] LLM explanation service initialized (provider: {llm_explanation_service.provider.value})!")
-        else:
-            print("[WARNING] LLM explanation service failed to initialize, using fallback")
+        # Try 3: Intelligent fallback (rule-based with board analysis)
+        if llm_explanation_service is None:
+            print("[INFO] Using intelligent fallback mode (context-aware rules)")
+            llm_explanation_service = LLMExplanationService(provider="fallback")
+            await llm_explanation_service.initialize()
+            print("[SUCCESS] Fallback explanation system initialized!")
+            
     except Exception as e:
-        print(f"[ERROR] Failed to initialize LLM explanation service: {e}")
-        print("[INFO] Using fallback explanation system")
+        print(f"[ERROR] Critical failure in LLM service initialization: {e}")
+        print("[FALLBACK] Creating minimal explanation service")
         try:
             llm_explanation_service = LLMExplanationService(provider="fallback")
             await llm_explanation_service.initialize()

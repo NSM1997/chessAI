@@ -315,13 +315,8 @@ async def analyze_position(request: dict):
             # Count minor pieces (knights and bishops)
             minor_pieces = len([p for p in board.piece_map().values() if p.piece_type in [chess.KNIGHT, chess.BISHOP]])
             
-            # Get move number for position type determination
-            move_number = 0
-            if len(fen_parts) > 5:
-                try:
-                    move_number = int(fen_parts[5])
-                except (ValueError, IndexError):
-                    move_number = 0
+            # Get move number from board object (more reliable than FEN parsing)
+            move_number = board.fullmove_number
             
             # Determine position type based on piece count and structure
             if piece_count <= 12:  # Very few pieces left
@@ -337,21 +332,12 @@ async def analyze_position(request: dict):
             else:
                 position_type = "middlegame"
             
-            # Debug: Print position analysis
-            print(f"[DEBUG] Position analysis: pieces={piece_count}, queens={queens}, pawns={pawns}, minor={minor_pieces}, type={position_type}")
-                
             # Override with move number only if piece analysis suggests endgame
-            if len(fen_parts) > 5:
-                try:
-                    move_number = int(fen_parts[5])
-                    print(f"[DEBUG] Move number: {move_number}, current type: {position_type}")
-                    if move_number > 50:
-                        position_type = "endgame"
-                    elif move_number > 25:
-                        position_type = "middlegame"
-                    # Don't force opening for early moves - let piece analysis decide
-                except (ValueError, IndexError):
-                    pass  # Keep the piece-based analysis
+            if move_number > 50:
+                position_type = "endgame"
+            elif move_number > 25:
+                position_type = "middlegame"
+            # Don't force opening for early moves - let piece analysis decide
                     
         except Exception:
             # Fallback to move number analysis

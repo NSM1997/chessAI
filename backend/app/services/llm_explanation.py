@@ -206,13 +206,13 @@ class LLMExplanationService:
         else:
             action = f"moves the {moving_piece}"
         
-        # Simple, natural prompt with length limit
+        # Simple, natural prompt with strict 2-line limit
         prompt = f"""You are a chess coach. Explain why {move_san} is the best move in this {position_type} position.
 
 Move: {move_san} {action}
 Evaluation: {eval_text}
 
-Explain in exactly 2 sentences (maximum 3 lines). Be concise but informative."""
+Explain in EXACTLY 2 lines. Be very concise."""
 
         return prompt
     
@@ -227,10 +227,10 @@ Explain in exactly 2 sentences (maximum 3 lines). Be concise but informative."""
             response = self.client.chat.completions.create(
                 model=model,
                 messages=[
-                    {"role": "system", "content": "You are a concise chess coach. Explain in exactly 2 sentences, maximum 3 lines."},
+                    {"role": "system", "content": "You are a concise chess coach. Explain in EXACTLY 2 lines. Keep it brief."},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=80,  # Limit for conciseness
+                max_tokens=60,  # Strict limit for 2 lines
                 temperature=0.7
             )
             

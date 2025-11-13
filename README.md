@@ -36,6 +36,12 @@ A browser extension that provides **real-time chess analysis with AI-powered exp
                   └──────────┘    └───────────┘
 ```
 
+📖 **[View Detailed Architecture Documentation](docs/ARCHITECTURE_OVERVIEW.md)**
+
+For comprehensive system architecture with interactive Mermaid diagrams, see:
+- **[Architecture Overview](docs/ARCHITECTURE_OVERVIEW.md)** - Complete flow diagrams and quick reference
+- **[Detailed Architecture](docs/ARCHITECTURE.md)** - In-depth component documentation
+
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -148,8 +154,8 @@ You should see:
 
 #### 7️⃣ Test the Extension
 
-1. Visit [Chess.com](https://chess.com) or [Lichess.org](https://lichess.org)
-2. Start a game or open a puzzle
+1. Visit [Chess.com](https://chess.com)
+2. Start a game
 3. An overlay should appear on the right side showing:
    - Best move suggestion
    - Position evaluation

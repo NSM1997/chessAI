@@ -1,0 +1,4 @@
+Model,Parameters,Precision,Recall,F1-Score,Inference Time
+CNN (Pre-trained),"1,038,164",1.0,1.0,1.0,0.16ms
+ResNet,"616,980",1.0,1.0,1.0,0.87ms
+Transformer,"106,324",1.0,1.0,1.0,0.32ms

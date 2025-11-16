@@ -19,3 +19,13 @@ models/**/checkpoint-*/scheduler.pt
 models/**/checkpoint-*/rng_state.pth
 models/**/checkpoint-*/trainer_state.json
 models/**/checkpoint-*
+
+# Large data files (should not be in git)
+backend/data/raw/*.csv
+backend/data/raw/*.csv.zst
+
+# Large model files (should not be in git)
+models/**/*.safetensors
+models/**/*.bin
+models/**/*.pt
+models/**/*.pth

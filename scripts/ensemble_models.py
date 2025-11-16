@@ -3,8 +3,8 @@ Ensemble Models for Maximum Recall
 Combines CNN, ResNet, and Transformer predictions using voting strategies
 
 Strategies:
-1. ANY (OR): If ANY model predicts theme → predict it (maximize recall)
-2. MAJORITY: If ≥2 models predict → predict it (balance precision/recall)
+1. ANY (OR): If ANY model predicts theme -> predict it (maximize recall)
+2. MAJORITY: If >=2 models predict -> predict it (balance precision/recall)
 3. WEIGHTED: Weight predictions by model confidence
 """
 import sys
@@ -112,7 +112,7 @@ print("=" * 80)
 strategies = []
 
 # Strategy 1: ANY (OR) - Maximum Recall
-print("\n[Strategy 1: ANY] Any model predicts → ensemble predicts")
+print("\n[Strategy 1: ANY] Any model predicts -> ensemble predicts")
 print("-" * 80)
 
 threshold = 0.3
@@ -149,7 +149,7 @@ for i, theme in enumerate(theme_names):
             print(f"    {theme:<20} {theme_recall:.4f} ({theme_recall*100:.1f}%) {status}")
 
 # Strategy 2: MAJORITY (≥2 votes) - Balanced
-print("\n[Strategy 2: MAJORITY] ≥2 models predict → ensemble predicts")
+print("\n[Strategy 2: MAJORITY] >=2 models predict -> ensemble predicts")
 print("-" * 80)
 
 vote_count = np.zeros_like(all_model_predictions[0])
@@ -172,7 +172,7 @@ strategies.append({
     'recall': recall,
     'precision': precision,
     'f1': f1,
-    'description': 'Predicts if ≥2 models agree'
+    'description': 'Predicts if >=2 models agree'
 })
 
 # Strategy 3: WEIGHTED - Smart Combination
@@ -207,7 +207,7 @@ strategies.append({
 })
 
 # Strategy 4: ALL (AND) - Maximum Precision
-print("\n[Strategy 4: ALL (AND)] All models must agree → ensemble predicts")
+print("\n[Strategy 4: ALL (AND)] All models must agree -> ensemble predicts")
 print("-" * 80)
 
 all_predictions = np.ones_like(all_model_predictions[0])

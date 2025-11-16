@@ -1,0 +1,77 @@
+{
+  "timestamp": "2025-11-16T21:23:08.719008",
+  "test_dataset_size": 1500,
+  "num_classes": 20,
+  "theme_names": [
+    "fork",
+    "pin",
+    "skewer",
+    "discoveredAttack",
+    "doubleAttack",
+    "mate",
+    "mateIn1",
+    "mateIn2",
+    "attraction",
+    "deflection",
+    "interference",
+    "clearance",
+    "sacrifice",
+    "backRankMate",
+    "hangingPiece",
+    "trappedPiece",
+    "enPassant",
+    "promotion",
+    "underPromotion",
+    "xRayAttack"
+  ],
+  "individual_models": [
+    {
+      "name": "CNN",
+      "recall": 0.5749559082892416,
+      "weight": 1.0
+    },
+    {
+      "name": "ResNet",
+      "recall": 0.3321575543797766,
+      "weight": 0.5
+    },
+    {
+      "name": "Transformer",
+      "recall": 0.6649029982363316,
+      "weight": 1.2
+    }
+  ],
+  "ensemble_strategies": [
+    {
+      "name": "ANY (OR)",
+      "recall": 0.7266313932980599,
+      "precision": 0.16597287498321472,
+      "f1": 0.270222999562746,
+      "description": "Predicts theme if ANY model detects it"
+    },
+    {
+      "name": "MAJORITY",
+      "recall": 0.5661375661375662,
+      "precision": 0.21281767955801104,
+      "f1": 0.30934789592033407,
+      "description": "Predicts if >=2 models agree"
+    },
+    {
+      "name": "WEIGHTED",
+      "recall": 0.5414462081128748,
+      "precision": 0.22567998039696152,
+      "f1": 0.3185748875821515,
+      "description": "Weighted by performance (Transformer=1.2x)"
+    },
+    {
+      "name": "ALL (AND)",
+      "recall": 0.2792475014697237,
+      "precision": 0.3033205619412516,
+      "f1": 0.29078665442301804,
+      "description": "Predicts only if ALL models agree"
+    }
+  ],
+  "best_recall_strategy": "ANY (OR)",
+  "best_recall_value": 0.7266313932980599,
+  "improvement_over_single": 9.283819628647205
+}

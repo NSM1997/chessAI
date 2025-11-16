@@ -123,6 +123,36 @@ class LLMExplanationService:
         except Exception as e:
             raise RuntimeError(f"Ollama not running or not accessible: {e}")
     
+    async def generate_raw_explanation(self, prompt: str) -> str:
+        """
+        Generate explanation from a raw custom prompt.
+        
+        Args:
+            prompt: Custom prompt text
+            
+        Returns:
+            Generated explanation
+        """
+        if not self.is_available:
+            return "LLM not available"
+        
+        try:
+            # Generate explanation using selected provider
+            if self.provider in [LLMProvider.OPENAI_GPT4, LLMProvider.OPENAI_GPT35]:
+                explanation = await self._generate_openai(prompt)
+            elif self.provider == LLMProvider.ANTHROPIC_CLAUDE:
+                explanation = await self._generate_anthropic(prompt)
+            elif self.provider == LLMProvider.OLLAMA_LOCAL:
+                explanation = await self._generate_ollama(prompt)
+            else:
+                return "LLM not available"
+            
+            return explanation
+            
+        except Exception as e:
+            logger.error(f"Error generating raw explanation: {e}")
+            return "Error generating explanation"
+    
     async def generate_explanation(
         self,
         fen: str,
@@ -227,10 +257,10 @@ Explain in EXACTLY 2 lines. Be very concise."""
             response = self.client.chat.completions.create(
                 model=model,
                 messages=[
-                    {"role": "system", "content": "You are a concise chess coach. Explain in EXACTLY 2 lines. Keep it brief."},
+                    {"role": "system", "content": "You are a chess coach. Provide clear, educational explanations."},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=60,  # Strict limit for 2 lines
+                max_tokens=100,  # Fast but enough for 2-3 sentences
                 temperature=0.7
             )
             

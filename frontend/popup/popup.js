@@ -8,6 +8,7 @@ class ChessAIPopup {
         
         this.setupUI();
         await this.loadStatus();
+        await this.restoreTrackingState();
     }
     
     setupUI() {
@@ -19,6 +20,22 @@ class ChessAIPopup {
         this.analyzeManualFenButton = document.getElementById('analyze-manual-fen');
         this.debugFenExtractionButton = document.getElementById('debug-fen-extraction');
         this.errorElement = document.getElementById('error-message');
+        
+        // Move analysis elements
+        this.analyzeMyMoveButton = document.getElementById('analyze-my-move-btn');
+        this.autoTrackStatus = document.getElementById('auto-track-status');
+        this.moveAnalysisSection = document.querySelector('.move-analysis-section');
+        this.moveQualityBadge = document.getElementById('move-quality-badge');
+        this.moveDetails = document.getElementById('move-details');
+        this.moveExplanationText = document.getElementById('move-explanation-text');
+        
+        // Tracking state
+        this.isWaitingForMove = false;
+        this.trackingInterval = null;
+        this.capturedFEN = null;
+        this.capturedTurn = null;
+        this.opponentMoved = false;
+        this.initialBestMove = null;
         
         if (this.refreshButton) {
             this.refreshButton.addEventListener('click', () => this.loadStatus());
@@ -34,6 +51,10 @@ class ChessAIPopup {
         
         if (this.debugFenExtractionButton) {
             this.debugFenExtractionButton.addEventListener('click', () => this.debugFenExtraction());
+        }
+        
+        if (this.analyzeMyMoveButton) {
+            this.analyzeMyMoveButton.addEventListener('click', () => this.handleAnalyzeMyMove());
         }
     }
     
@@ -690,6 +711,469 @@ class ChessAIPopup {
         }
         
         return true;
+    }
+    
+    async analyzeMove() {
+        try {
+            this.clearError();
+            
+            const fenBefore = this.fenBeforeInput.value.trim();
+            const fenAfter = this.fenAfterInput.value.trim();
+            
+            if (!fenBefore || !fenAfter) {
+                this.showError('Please enter both FEN positions (before and after your move)');
+                return;
+            }
+            
+            this.showMessage('Analyzing your move...', 'info');
+            
+            // Call the /analyze-move API endpoint
+            const response = await fetch('http://localhost:8001/analyze-move', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    fen_before: fenBefore,
+                    fen_after: fenAfter
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`API error: ${response.status}`);
+            }
+            
+            const analysis = await response.json();
+            
+            // Check if the server returned an error
+            if (analysis.error) {
+                this.showError(`${analysis.error}: ${analysis.message}`);
+                return;
+            }
+            
+            // Display move analysis
+            this.displayMoveAnalysis(analysis);
+            
+        } catch (error) {
+            console.error('[Chess AI Popup] Move analysis failed:', error);
+            this.showError('Move analysis failed: ' + error.message);
+        }
+    }
+    
+    displayMoveAnalysis(analysis) {
+        // Show the move analysis section
+        if (this.moveAnalysisSection) {
+            this.moveAnalysisSection.style.display = 'block';
+        }
+        
+        // Update quality badge
+        if (this.moveQualityBadge && analysis.comparison) {
+            const display = analysis.comparison.quality_display;
+            const quality = analysis.comparison.quality;
+            
+            this.moveQualityBadge.textContent = display.emoji + ' ' + display.label;
+            this.moveQualityBadge.className = 'quality-badge quality-' + quality;
+        }
+        
+        // Update move details
+        if (this.moveDetails && analysis.user_move && analysis.best_move) {
+            const userMove = analysis.user_move;
+            const bestMove = analysis.best_move;
+            const isbestMove = analysis.comparison.is_best_move;
+            
+            let detailsHTML = `
+                <p><strong>Your move:</strong> ${userMove.san}</p>
+                <p><strong>Evaluation:</strong> ${userMove.evaluation.display || '0.00'}</p>
+            `;
+            
+            if (!isbestMove) {
+                detailsHTML += `
+                    <p><strong>Best move:</strong> ${bestMove.san} (${bestMove.score.display})</p>
+                    <p><strong>Difference:</strong> ${Math.abs(analysis.comparison.score_difference)} centipawns</p>
+                `;
+                
+                // Show initial hint if different
+                if (analysis.initialBestMove && analysis.initialBestMove.san !== bestMove.san) {
+                    detailsHTML += `
+                        <p style="font-size: 11px; color: #9ca3af; margin-top: 5px;">
+                            <em>Note: Initial hint was ${analysis.initialBestMove.san}</em>
+                        </p>
+                    `;
+                }
+            }
+            
+            this.moveDetails.innerHTML = detailsHTML;
+        }
+        
+        // Update explanation
+        if (this.moveExplanationText && analysis.explanation) {
+            this.moveExplanationText.textContent = analysis.explanation;
+        }
+        
+        // Clear the error message and show success
+        this.clearError();
+    }
+    
+    async handleAnalyzeMyMove() {
+        if (this.isWaitingForMove) {
+            // Cancel waiting
+            this.cancelWaiting();
+            return;
+        }
+        
+        try {
+            this.clearError();
+            
+            // Clear any old cached analysis
+            await chrome.storage.local.remove(['cachedMoveAnalysis']);
+            
+            // Capture current position
+            const currentFEN = await this.getCurrentFEN();
+            
+            if (!currentFEN) {
+                this.showError('Could not extract current position. Make sure you are on a chess game page.');
+                return;
+            }
+            
+            this.capturedFEN = currentFEN;
+            this.isWaitingForMove = true;
+            
+            // Determine whose turn it is
+            const fenParts = currentFEN.split(' ');
+            this.capturedTurn = fenParts[1]; // 'w' or 'b'
+            this.opponentMoved = false;
+            this.initialBestMove = null; // Don't fetch now, will be in final analysis
+            
+            // Save state to chrome storage
+            await chrome.storage.local.set({
+                isWaitingForMove: true,
+                capturedFEN: currentFEN,
+                capturedTurn: this.capturedTurn,
+                opponentMoved: false,
+                initialBestMove: this.initialBestMove,
+                timestamp: Date.now()
+            });
+            
+            // Update UI
+            if (this.analyzeMyMoveButton) {
+                this.analyzeMyMoveButton.textContent = 'Waiting for your move... (Click to cancel)';
+                this.analyzeMyMoveButton.style.background = 'rgba(251, 191, 36, 0.3)';
+            }
+            
+            if (this.autoTrackStatus) {
+                const turnColor = this.capturedTurn === 'w' ? 'White' : 'Black';
+                this.autoTrackStatus.textContent = `⏳ Tracking ${turnColor}'s move. Make your move...`;
+                this.autoTrackStatus.style.color = '#fbbf24';
+            }
+            
+            // Start checking for move
+            this.trackingInterval = setInterval(() => this.checkForMove(), 1500);
+            
+            console.log('[Chess AI] Waiting for move. Captured FEN:', currentFEN);
+            
+        } catch (error) {
+            console.error('[Chess AI] Failed to start move detection:', error);
+            this.showError('Failed to start move detection: ' + error.message);
+            this.resetButton();
+        }
+    }
+    
+    async checkForMove() {
+        if (!this.isWaitingForMove) return;
+        
+        try {
+            const currentFEN = await this.getCurrentFEN();
+            
+            if (!currentFEN) {
+                console.log('[Chess AI] Could not extract FEN during tracking');
+                return;
+            }
+            
+            // Check if position changed
+            if (currentFEN !== this.capturedFEN) {
+                const fenParts = currentFEN.split(' ');
+                const currentTurn = fenParts[1]; // 'w' or 'b'
+                
+                console.log('[Chess AI] Position changed');
+                console.log('[Chess AI] Captured turn:', this.capturedTurn);
+                console.log('[Chess AI] Current turn:', currentTurn);
+                console.log('[Chess AI] Opponent moved:', this.opponentMoved);
+                
+                // Check if this is the opponent's move or user's move
+                if (currentTurn !== this.capturedTurn && !this.opponentMoved) {
+                    // Opponent just moved (turn switched)
+                    console.log('[Chess AI] Opponent moved, waiting for user move...');
+                    this.opponentMoved = true;
+                    this.capturedFEN = currentFEN; // Update to opponent's move
+                    
+                    // Update storage
+                    await chrome.storage.local.set({
+                        capturedFEN: currentFEN,
+                        opponentMoved: true
+                    });
+                    
+                    // Update UI
+                    if (this.autoTrackStatus) {
+                        this.autoTrackStatus.textContent = '⏳ Opponent moved. Now make YOUR move...';
+                    }
+                    
+                } else if (currentTurn === this.capturedTurn && this.opponentMoved) {
+                    // User just moved (turn switched back)
+                    console.log('[Chess AI] User move detected!');
+                    console.log('[Chess AI] Before user move:', this.capturedFEN);
+                    console.log('[Chess AI] After user move:', currentFEN);
+                    
+                    // Stop tracking
+                    this.stopWaiting();
+                    
+                    // Trigger background analysis (won't block)
+                    this.triggerBackgroundAnalysis(this.capturedFEN, currentFEN);
+                    
+                } else if (currentTurn === this.capturedTurn && !this.opponentMoved) {
+                    // User moved without opponent moving first
+                    console.log('[Chess AI] User move detected (no opponent move)!');
+                    console.log('[Chess AI] Before:', this.capturedFEN);
+                    console.log('[Chess AI] After:', currentFEN);
+                    
+                    // Stop tracking
+                    this.stopWaiting();
+                    
+                    // Trigger background analysis
+                    this.triggerBackgroundAnalysis(this.capturedFEN, currentFEN);
+                }
+            }
+            
+        } catch (error) {
+            console.error('[Chess AI] Error checking for move:', error);
+        }
+    }
+    
+    triggerBackgroundAnalysis(fenBefore, fenAfter) {
+        // Send to background script for analysis (non-blocking)
+        chrome.runtime.sendMessage({
+            action: 'analyzeMoveInBackground',
+            fen_before: fenBefore,
+            fen_after: fenAfter
+        }, (response) => {
+            if (response && response.success) {
+                console.log('[Chess AI] Background analysis triggered successfully');
+            } else {
+                console.error('[Chess AI] Background analysis failed:', response?.error);
+            }
+        });
+        
+        console.log('[Chess AI] Analysis triggered in background, close and reopen popup to see result');
+    }
+    
+    async analyzeDetectedMove(fenBefore, fenAfter) {
+        try {
+            this.clearError();
+            
+            if (this.autoTrackStatus) {
+                this.autoTrackStatus.textContent = '🔍 Analyzing your move...';
+                this.autoTrackStatus.style.color = '#3b82f6';
+            }
+            
+            console.log('[Chess AI] Analyzing move:');
+            console.log('[Chess AI] FEN Before:', fenBefore);
+            console.log('[Chess AI] FEN After:', fenAfter);
+            
+            // Call the /analyze-move API endpoint
+            const response = await fetch('http://localhost:8001/analyze-move', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    fen_before: fenBefore,
+                    fen_after: fenAfter
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`API error: ${response.status}`);
+            }
+            
+            const analysis = await response.json();
+            
+            // Check if the server returned an error
+            if (analysis.error) {
+                let errorMsg = `${analysis.error}: ${analysis.message}`;
+                
+                // Add helpful tips based on error type
+                if (analysis.error === 'Could not detect move') {
+                    errorMsg += '\n\nPossible reasons:\n';
+                    errorMsg += '• Multiple moves were made (you + opponent)\n';
+                    errorMsg += '• Try clicking button IMMEDIATELY before YOUR move\n';
+                    errorMsg += '• Make sure it\'s your turn when you click the button';
+                }
+                
+                this.showError(errorMsg);
+                this.resetButton();
+                return;
+            }
+            
+            // Add initial best move info if available
+            if (this.initialBestMove) {
+                analysis.initialBestMove = this.initialBestMove;
+            }
+            
+            // Cache analysis for instant display on next popup open
+            // Include timestamp and FENs to ensure it's for the right move
+            await chrome.storage.local.set({
+                cachedMoveAnalysis: {
+                    ...analysis,
+                    _cached_at: Date.now(),
+                    _fen_before: fenBefore,
+                    _fen_after: fenAfter
+                }
+            });
+            
+            // Display move analysis
+            this.displayMoveAnalysis(analysis);
+            
+            // Update status based on quality
+            if (this.autoTrackStatus && analysis.comparison) {
+                const quality = analysis.comparison.quality;
+                const emoji = analysis.comparison.quality_display.emoji;
+                const label = analysis.comparison.quality_display.label;
+                
+                this.autoTrackStatus.textContent = `${emoji} ${label}! Click to analyze another move.`;
+                
+                if (quality === 'best' || quality === 'excellent') {
+                    this.autoTrackStatus.style.color = '#4ade80';
+                } else if (quality === 'good') {
+                    this.autoTrackStatus.style.color = '#3b82f6';
+                } else if (quality === 'inaccuracy') {
+                    this.autoTrackStatus.style.color = '#fbbf24';
+                } else {
+                    this.autoTrackStatus.style.color = '#f87171';
+                }
+            }
+            
+            // Reset button
+            this.resetButton();
+            
+        } catch (error) {
+            console.error('[Chess AI Popup] Move analysis failed:', error);
+            this.showError('Move analysis failed: ' + error.message);
+            this.resetButton();
+        }
+    }
+    
+    stopWaiting() {
+        if (this.trackingInterval) {
+            clearInterval(this.trackingInterval);
+            this.trackingInterval = null;
+        }
+        this.isWaitingForMove = false;
+    }
+    
+    cancelWaiting() {
+        this.stopWaiting();
+        this.resetButton();
+        
+        if (this.autoTrackStatus) {
+            this.autoTrackStatus.textContent = 'Cancelled. Click to analyze another move.';
+            this.autoTrackStatus.style.color = '#9ca3af';
+        }
+    }
+    
+    resetButton() {
+        if (this.analyzeMyMoveButton) {
+            this.analyzeMyMoveButton.textContent = 'Analyze My Move';
+            this.analyzeMyMoveButton.style.background = 'rgba(255,255,255,0.2)';
+        }
+        this.isWaitingForMove = false;
+        
+        // Clear storage including cached analysis
+        chrome.storage.local.remove(['isWaitingForMove', 'capturedFEN', 'capturedTurn', 'opponentMoved', 'initialBestMove', 'cachedMoveAnalysis', 'timestamp']);
+    }
+    
+    async restoreTrackingState() {
+        try {
+            const data = await chrome.storage.local.get(['isWaitingForMove', 'capturedFEN', 'capturedTurn', 'opponentMoved', 'initialBestMove', 'timestamp']);
+            
+            if (!data.isWaitingForMove || !data.capturedFEN) {
+                return;
+            }
+            
+            // Check if state is not too old (max 5 minutes)
+            const age = Date.now() - (data.timestamp || 0);
+            if (age > 5 * 60 * 1000) {
+                console.log('[Chess AI] Tracking state too old, clearing');
+                this.resetButton();
+                return;
+            }
+            
+            console.log('[Chess AI] Restoring tracking state');
+            this.capturedFEN = data.capturedFEN;
+            this.capturedTurn = data.capturedTurn || 'w';
+            this.opponentMoved = data.opponentMoved || false;
+            this.initialBestMove = data.initialBestMove || null;
+            this.isWaitingForMove = true;
+            
+            // Check if we have cached analysis from previous popup session
+            const cachedData = await chrome.storage.local.get(['cachedMoveAnalysis']);
+            if (cachedData.cachedMoveAnalysis) {
+                const cached = cachedData.cachedMoveAnalysis;
+                
+                // Check if cache is recent (within last 10 seconds)
+                const cacheAge = Date.now() - (cached._cached_at || 0);
+                if (cacheAge < 10000) {
+                    console.log('[Chess AI] Showing cached analysis');
+                    this.displayMoveAnalysis(cached);
+                    
+                    // Update status to show it's complete
+                    if (this.autoTrackStatus && cached.comparison) {
+                        const emoji = cached.comparison.quality_display.emoji;
+                        const label = cached.comparison.quality_display.label;
+                        this.autoTrackStatus.textContent = `${emoji} ${label}! Click button to analyze another move.`;
+                    }
+                    
+                    // Clear tracking state since we showed the result
+                    this.resetButton();
+                    return;
+                } else {
+                    // Cache too old, clear it
+                    console.log('[Chess AI] Cache too old, clearing');
+                    await chrome.storage.local.remove(['cachedMoveAnalysis']);
+                }
+            }
+            
+            // Check if move was made while popup was closed
+            const currentFEN = await this.getCurrentFEN();
+            
+            if (currentFEN && currentFEN !== this.capturedFEN) {
+                // Move detected!
+                console.log('[Chess AI] Move detected while popup was closed');
+                
+                // Show loading status immediately
+                if (this.autoTrackStatus) {
+                    this.autoTrackStatus.textContent = '🔍 Analyzing your move...';
+                    this.autoTrackStatus.style.color = '#3b82f6';
+                }
+                
+                // Analyze immediately (this is when popup reopens)
+                await this.analyzeDetectedMove(this.capturedFEN, currentFEN);
+                
+                // Reset state
+                this.resetButton();
+            } else {
+                // Still waiting
+                if (this.analyzeMyMoveButton) {
+                    this.analyzeMyMoveButton.textContent = 'Waiting for your move... (Click to cancel)';
+                    this.analyzeMyMoveButton.style.background = 'rgba(251, 191, 36, 0.3)';
+                }
+                
+                if (this.autoTrackStatus) {
+                    this.autoTrackStatus.textContent = '⏳ Still waiting for your move...';
+                    this.autoTrackStatus.style.color = '#fbbf24';
+                }
+                
+                // Resume checking
+                this.trackingInterval = setInterval(() => this.checkForMove(), 1500);
+            }
+            
+        } catch (error) {
+            console.error('[Chess AI] Error restoring tracking state:', error);
+        }
     }
     
     sendMessage(message) {

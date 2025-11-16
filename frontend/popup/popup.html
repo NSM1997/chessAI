@@ -109,6 +109,57 @@
         .manual-fen-section input::placeholder {
             color: #9ca3af;
         }
+        
+        .move-analysis-section {
+            margin: 15px 0;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .move-analysis-section h3 {
+            margin: 0 0 10px 0;
+            color: #e5e7eb;
+            font-size: 14px;
+        }
+        
+        .quality-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: white;
+        }
+        
+        .quality-best { background: #10b981; }
+        .quality-excellent { background: #06b6d4; }
+        .quality-good { background: #3b82f6; }
+        .quality-inaccuracy { background: #f59e0b; }
+        .quality-mistake { background: #f97316; }
+        .quality-blunder { background: #ef4444; }
+        .quality-unknown { background: #6b7280; }
+        
+        .move-details {
+            margin: 10px 0;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        
+        .move-details p {
+            margin: 5px 0;
+        }
+        
+        .explanation-text {
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            font-size: 12px;
+            line-height: 1.5;
+        }
     </style>
 </head>
 <body>
@@ -122,14 +173,27 @@
     </div>
     
         <button id="refresh-btn" class="btn">Refresh Status</button>
-        <button id="test-analysis-btn" class="btn">Test Analysis</button>
+        <button id="test-analysis-btn" class="btn">Show Best Move</button>
+        
+        <div class="move-analysis-section" style="display: none;">
+            <h3>🎯 Your Move Analysis</h3>
+            <div id="move-quality-badge" class="quality-badge">Enter two positions to compare</div>
+            <div id="move-details" class="move-details"></div>
+            <div id="move-explanation-text" class="explanation-text"></div>
+        </div>
         
         <div class="manual-fen-section">
-            <h3>Manual FEN Input</h3>
+            <h3>📊 Best Move Analysis</h3>
             <p>If automatic extraction fails, enter the FEN manually:</p>
             <input type="text" id="manual-fen" placeholder="e.g., 8/2q2k1/2b1Q1p1/P5N1/3R4/7P/5PP1/7K b - - 0 1" />
             <button id="analyze-manual-fen" class="btn">Analyze Manual FEN</button>
             <button id="debug-fen-extraction" class="btn">Debug FEN Extraction</button>
+        </div>
+        
+        <div class="manual-fen-section">
+            <h3>🎯 Analyze Your Move</h3>
+            <p id="auto-track-status" style="margin-bottom: 10px; color: #d1d5db; font-size: 12px;">💡 Click anytime during the game. I'll track YOUR move only!</p>
+            <button id="analyze-my-move-btn" class="btn" style="font-size: 16px; padding: 15px; font-weight: bold;">Analyze My Move</button>
         </div>
         
         <div id="error-message" class="message"></div>

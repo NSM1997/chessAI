@@ -24,11 +24,12 @@ chess_engine_service = None
 tactical_analysis_service = None
 llm_explanation_service = None
 board_analyzer = None
+move_comparator = None
 
 @app.on_event("startup")
 async def startup_event():
     """Initialize chess engine, tactical classifier, board analyzer, and LLM explanation service on startup"""
-    global chess_engine_service, tactical_analysis_service, llm_explanation_service, board_analyzer
+    global chess_engine_service, tactical_analysis_service, llm_explanation_service, board_analyzer, move_comparator
     
     # Initialize Stockfish engine
     try:
@@ -72,6 +73,16 @@ async def startup_event():
     except Exception as e:
         print(f"[ERROR] Failed to initialize board analyzer: {e}")
         board_analyzer = None
+    
+    # Initialize Move Comparator
+    try:
+        from app.services.move_comparator import MoveComparator
+        
+        move_comparator = MoveComparator()
+        print("[SUCCESS] Move comparator initialized successfully!")
+    except Exception as e:
+        print(f"[ERROR] Failed to initialize move comparator: {e}")
+        move_comparator = None
     
     # Initialize LLM Explanation Service (Phase 3: Path B)
     # Smart provider selection: OpenAI → Ollama → Fallback
@@ -560,6 +571,264 @@ async def analyze_position(request: dict):
         ],
         "analysis_time": 0.5
     }
+
+@app.options("/analyze-move")
+async def analyze_move_options():
+    """Handle preflight OPTIONS requests for CORS"""
+    return {"message": "OK"}
+
+@app.post("/analyze-move")
+async def analyze_move(request: dict):
+    """
+    Analyze a user's move and compare it to the best move.
+    
+    Request:
+    {
+        "fen_before": "position before the move",
+        "fen_after": "position after the move",
+        "user_move": "e2e4" (optional, UCI format)
+    }
+    
+    Response:
+    {
+        "user_move": {...},
+        "best_move": {...},
+        "comparison": {...},
+        "explanation": "..."
+    }
+    """
+    fen_before = request.get("fen_before")
+    fen_after = request.get("fen_after")
+    user_move_uci = request.get("user_move")
+    
+    # Validate input
+    if not fen_before or not fen_after:
+        return {
+            "error": "Missing FEN data",
+            "message": "Please provide both fen_before and fen_after"
+        }
+    
+    try:
+        import chess
+        
+        # Create boards
+        board_before = chess.Board(fen_before)
+        board_after = chess.Board(fen_after)
+        
+        # Detect the user's move if not provided
+        if not user_move_uci:
+            # Find the move by comparing boards
+            possible_moves = []
+            for move in board_before.legal_moves:
+                test_board = board_before.copy()
+                test_board.push(move)
+                # Compare just the piece positions (ignore move counters)
+                if test_board.board_fen() == board_after.board_fen():
+                    possible_moves.append(move)
+            
+            if len(possible_moves) == 0:
+                return {
+                    "error": "Could not detect move",
+                    "message": "Unable to determine the move made between the two positions. The positions may differ by more than one move, or FEN extraction may be inconsistent.",
+                    "debug": {
+                        "fen_before": fen_before,
+                        "fen_after": fen_after,
+                        "legal_moves_count": len(list(board_before.legal_moves))
+                    }
+                }
+            elif len(possible_moves) > 1:
+                # Multiple moves lead to same position (e.g., castling notation differences)
+                # Just pick the first one
+                user_move_uci = possible_moves[0].uci()
+                print(f"[WARNING] Multiple moves detected, using first: {user_move_uci}")
+            else:
+                user_move_uci = possible_moves[0].uci()
+        
+        # Parse the user's move
+        try:
+            user_move = chess.Move.from_uci(user_move_uci)
+            if user_move not in board_before.legal_moves:
+                return {
+                    "error": "Illegal move",
+                    "message": f"The move {user_move_uci} is not legal in the given position"
+                }
+        except Exception as e:
+            return {
+                "error": "Invalid move format",
+                "message": f"Could not parse move: {user_move_uci}"
+            }
+        
+        user_move_san = board_before.san(user_move)
+        
+        # Get best move analysis from Stockfish
+        if not chess_engine_service or not chess_engine_service.is_initialized:
+            return {
+                "error": "Engine not available",
+                "message": "Chess engine is not initialized. Cannot analyze moves."
+            }
+        
+        # Analyze the position before the move to get best move
+        best_move_analysis = await chess_engine_service.analyze_position(fen_before, depth=20)
+        
+        if not best_move_analysis or not best_move_analysis.get('best_moves'):
+            return {
+                "error": "Analysis failed",
+                "message": "Could not analyze the position"
+            }
+        
+        best_move_data = best_move_analysis['best_moves'][0]
+        
+        # Analyze the user's move by playing it and evaluating the resulting position
+        test_board = board_before.copy()
+        test_board.push(user_move)
+        user_position_analysis = await chess_engine_service.analyze_position(test_board.fen(), depth=20)
+        
+        # Get evaluation of user's move from the NEW position's perspective
+        # Need to flip the score since it's from opponent's perspective now
+        if user_position_analysis and user_position_analysis.get('best_moves'):
+            user_eval_score = user_position_analysis['best_moves'][0]['score']
+            # Flip the score (it's from opponent's view after the move)
+            if user_eval_score['type'] == 'cp':
+                user_eval_score['value'] = -user_eval_score['value']
+            elif user_eval_score['type'] == 'mate':
+                user_eval_score['value'] = -user_eval_score['value']
+        else:
+            user_eval_score = {"type": "cp", "value": 0, "display": "0.00"}
+        
+        # Create user move evaluation data
+        user_move_eval = {
+            "move": user_move_uci,
+            "san": user_move_san,
+            "score": user_eval_score
+        }
+        
+        # Compare moves using MoveComparator
+        comparison = None
+        if move_comparator:
+            try:
+                comparison = move_comparator.compare_moves(
+                    user_move_eval,
+                    best_move_data,
+                    board_before
+                )
+            except Exception as e:
+                print(f"[WARNING] Move comparison failed: {e}")
+        
+        # Analyze move impact if board_analyzer is available
+        move_impact = None
+        if board_analyzer:
+            try:
+                move_impact = board_analyzer.analyze_move_impact(board_before, user_move)
+            except Exception as e:
+                print(f"[WARNING] Move impact analysis failed: {e}")
+        
+        # Generate detailed explanation using LLM with comparison
+        explanation = ""
+        if llm_explanation_service and comparison:
+            try:
+                # Create comprehensive comparison context for LLM
+                user_move_san = user_move_eval['san']
+                best_move_san = best_move_data['san']
+                quality = comparison['quality']
+                cp_loss = abs(comparison['score_difference'])
+                
+                # Build a detailed prompt for the LLM
+                comparison_context = {
+                    'user_move': user_move_san,
+                    'best_move': best_move_san,
+                    'quality': quality,
+                    'cp_loss': cp_loss,
+                    'user_score': user_eval_score,
+                    'best_score': best_move_data['score'],
+                    'move_impact': move_impact,
+                    'position_fen': fen_before
+                }
+                
+                # Generate comparative explanation using LLM
+                from app.services.llm_explanation import LLMExplanationService
+                
+                # Create a concise prompt for faster generation
+                prompt = f"""Chess move analysis:
+User: {user_move_san} ({user_eval_score.get('display', '0.00')})
+Best: {best_move_san} ({best_move_data['score'].get('display', '0.00')})
+Quality: {quality} (-{cp_loss}cp)
+
+Explain in 2-3 sentences:
+{comparison['quality_display']['emoji']} Why is {best_move_san} better than {user_move_san}?"""
+
+                explanation = await llm_explanation_service.generate_raw_explanation(prompt)
+                
+                if not explanation or len(explanation) < 20:
+                    # Fallback to move comparator
+                    if move_comparator:
+                        explanation = move_comparator.generate_detailed_feedback(
+                            user_move_eval,
+                            best_move_data,
+                            comparison,
+                            move_impact
+                        )
+                    else:
+                        explanation = comparison.get('comparison_text', '')
+                        
+            except Exception as e:
+                print(f"[WARNING] LLM explanation generation failed: {e}")
+                # Fallback to move comparator
+                if move_comparator:
+                    explanation = move_comparator.generate_detailed_feedback(
+                        user_move_eval,
+                        best_move_data,
+                        comparison,
+                        move_impact
+                    )
+                else:
+                    explanation = comparison.get('comparison_text', '') if comparison else ""
+        elif comparison:
+            # Fallback without LLM
+            if move_comparator:
+                explanation = move_comparator.generate_detailed_feedback(
+                    user_move_eval,
+                    best_move_data,
+                    comparison,
+                    move_impact
+                )
+            else:
+                explanation = comparison.get('comparison_text', '')
+        else:
+            explanation = f"Your move: {user_move_san}. Best move: {best_move_data['san']}."
+        
+        # Build response
+        response = {
+            "fen_before": fen_before,
+            "fen_after": fen_after,
+            "user_move": {
+                "move": user_move_uci,
+                "san": user_move_san,
+                "evaluation": user_eval_score,
+            },
+            "best_move": best_move_data,
+            "comparison": comparison if comparison else {
+                "quality": "unknown",
+                "quality_display": {
+                    "badge_color": "#gray",
+                    "emoji": "❓",
+                    "label": "Unknown",
+                    "description": "Could not compare moves"
+                }
+            },
+            "explanation": explanation,
+            "move_impact": move_impact
+        }
+        
+        return response
+        
+    except Exception as e:
+        import traceback
+        print(f"[ERROR] Move analysis failed: {e}")
+        print(traceback.format_exc())
+        return {
+            "error": "Analysis failed",
+            "message": f"Could not analyze move: {str(e)}"
+        }
 
 if __name__ == "__main__":
     print("Starting simple test server on http://localhost:8001")

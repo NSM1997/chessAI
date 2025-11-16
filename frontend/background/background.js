@@ -41,6 +41,37 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             sendResponse({ success: true, message: 'pong' });
             break;
             
+        case 'analyzeMoveInBackground':
+            // Perform move analysis in background
+            const { fen_before, fen_after } = message;
+            
+            fetch('http://localhost:8001/analyze-move', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ fen_before, fen_after })
+            })
+            .then(response => response.json())
+            .then(analysis => {
+                // Cache the result for instant popup display
+                chrome.storage.local.set({
+                    cachedMoveAnalysis: {
+                        ...analysis,
+                        _cached_at: Date.now(),
+                        _fen_before: fen_before,
+                        _fen_after: fen_after
+                    }
+                });
+                
+                console.log('[Chess AI Background] Analysis complete and cached');
+                sendResponse({ success: true, analysis });
+            })
+            .catch(error => {
+                console.error('[Chess AI Background] Analysis failed:', error);
+                sendResponse({ success: false, error: error.message });
+            });
+            
+            return true; // Keep channel open for async response
+            
         default:
             sendResponse({ success: false, error: 'Unknown action' });
     }

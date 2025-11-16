@@ -7,11 +7,14 @@ class ChessAIOverlay {
         this.apiBaseUrl = 'http://localhost:8001';
         this.overlay = null;
         this.currentFEN = null;
+        this.previousFEN = null;
         this.lastUpdateTime = 0;
         this.isAnalyzing = false;
         this.isActive = false;
         this.retryCount = 0;
         this.maxRetries = 3;
+        this.autoAnalyzeEnabled = false;
+        this.lastMoveAnalysis = null;
         
         this.loadConfiguration();
         this.initializeExtractor();
@@ -165,9 +168,9 @@ class ChessAIOverlay {
                 </div>
                 
                 <div class="chess-ai-analysis">
-                    <h4>Analysis</h4>
+                    <h4>📊 Best Move</h4>
                     <div class="best-moves">
-                        <h5>Best Moves:</h5>
+                        <h5>Recommended:</h5>
                         <ul class="moves-list">
                             <li>Click Quick Analysis to start</li>
                         </ul>
@@ -177,8 +180,21 @@ class ChessAIOverlay {
                     </div>
                 </div>
                 
+                <div class="your-move-section" id="your-move-section" style="display: none;">
+                    <h4>🎯 Your Move Analysis</h4>
+                    <div class="move-quality-badge" id="move-quality-badge">GOOD MOVE!</div>
+                    <div class="your-move-details" id="your-move-details">
+                        <p class="move-name">Your move: <strong>...</strong></p>
+                        <p class="move-evaluation">Score: ...</p>
+                    </div>
+                    <div class="move-explanation" id="move-explanation">
+                        <p>Analyzing your move...</p>
+                    </div>
+                </div>
+                
                 <div class="chess-ai-actions">
-                    <button class="action-btn" id="quick-analysis">Quick Analysis</button>
+                    <button class="action-btn" id="quick-analysis">Show Best Move</button>
+                    <button class="action-btn toggle-btn" id="toggle-auto-analysis">Enable Auto-Analyze</button>
                 </div>
             </div>
         `;
@@ -199,7 +215,9 @@ class ChessAIOverlay {
                 position: fixed;
                 top: 20px;
                 right: 20px;
-                width: 300px;
+                width: 350px;
+                max-height: 90vh;
+                overflow-y: auto;
                 background: #4f46e5;
                 border-radius: 10px;
                 box-shadow: 0 4px 12px rgba(0,0,0,0.3);
@@ -291,6 +309,46 @@ class ChessAIOverlay {
             .action-btn:hover {
                 background: rgba(255,255,255,0.3);
             }
+            
+            .toggle-btn {
+                margin-top: 5px;
+                font-size: 12px;
+            }
+            
+            .your-move-section {
+                margin-top: 20px;
+                padding-top: 15px;
+                border-top: 1px solid rgba(255,255,255,0.2);
+            }
+            
+            .move-quality-badge {
+                display: inline-block;
+                padding: 5px 12px;
+                border-radius: 15px;
+                font-size: 11px;
+                font-weight: bold;
+                margin-bottom: 10px;
+                color: white;
+            }
+            
+            .quality-best { background: #10b981; }
+            .quality-excellent { background: #06b6d4; }
+            .quality-good { background: #3b82f6; }
+            .quality-inaccuracy { background: #f59e0b; }
+            .quality-mistake { background: #f97316; }
+            .quality-blunder { background: #ef4444; }
+            
+            .your-move-details p {
+                margin: 5px 0;
+                font-size: 12px;
+            }
+            
+            .move-explanation {
+                margin-top: 10px;
+                font-size: 12px;
+                line-height: 1.4;
+                opacity: 0.9;
+            }
         `;
         
         document.head.appendChild(styles);
@@ -299,9 +357,11 @@ class ChessAIOverlay {
     attachEventListeners() {
         const closeBtn = this.overlay.querySelector('#chess-ai-close');
         const quickAnalysisBtn = this.overlay.querySelector('#quick-analysis');
+        const toggleAutoBtn = this.overlay.querySelector('#toggle-auto-analysis');
         
         if (closeBtn) closeBtn.addEventListener('click', () => this.hideOverlay());
         if (quickAnalysisBtn) quickAnalysisBtn.addEventListener('click', () => this.quickAnalyze());
+        if (toggleAutoBtn) toggleAutoBtn.addEventListener('click', () => this.toggleAutoAnalyze());
     }
     
     startPositionMonitoring() {
@@ -311,7 +371,7 @@ class ChessAIOverlay {
         setTimeout(() => this.checkBoardChange(), 2000);
     }
     
-    checkBoardChange() {
+    async checkBoardChange() {
         if (!this.isActive || !this.extractor) {
             console.log('[Chess AI] Not active or no extractor');
             return;
@@ -322,6 +382,7 @@ class ChessAIOverlay {
         console.log('[Chess AI] Board check:', {
             newFEN: newFEN,
             currentFEN: this.currentFEN,
+            previousFEN: this.previousFEN,
             isActive: this.isActive,
             hasExtractor: !!this.extractor
         });
@@ -338,6 +399,13 @@ class ChessAIOverlay {
         if (newFEN && newFEN !== this.currentFEN && timeSinceLastUpdate > 3000) {
             console.log('[Chess AI] Position changed:', newFEN);
             
+            // Check if this is a move (not just initial position)
+            if (this.currentFEN && this.autoAnalyzeEnabled) {
+                // A move was made! Analyze it
+                await this.analyzeMoveAsync(this.currentFEN, newFEN);
+            }
+            
+            this.previousFEN = this.currentFEN;
             this.currentFEN = newFEN;
             this.lastUpdateTime = now;
             
@@ -459,6 +527,100 @@ class ChessAIOverlay {
         if (this.overlay) {
             this.overlay.style.display = 'none';
         }
+    }
+    
+    toggleAutoAnalyze() {
+        this.autoAnalyzeEnabled = !this.autoAnalyzeEnabled;
+        const toggleBtn = this.overlay.querySelector('#toggle-auto-analysis');
+        
+        if (toggleBtn) {
+            if (this.autoAnalyzeEnabled) {
+                toggleBtn.textContent = '✓ Auto-Analyze ON';
+                toggleBtn.style.background = 'rgba(16, 185, 129, 0.3)';
+            } else {
+                toggleBtn.textContent = 'Enable Auto-Analyze';
+                toggleBtn.style.background = 'rgba(255,255,255,0.2)';
+            }
+        }
+        
+        console.log('[Chess AI] Auto-analyze:', this.autoAnalyzeEnabled ? 'enabled' : 'disabled');
+    }
+    
+    async analyzeMoveAsync(fenBefore, fenAfter) {
+        if (!fenBefore || !fenAfter || fenBefore === fenAfter) {
+            return;
+        }
+        
+        console.log('[Chess AI] Analyzing move from', fenBefore, 'to', fenAfter);
+        
+        try {
+            const response = await fetch(this.apiBaseUrl + '/analyze-move', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    fen_before: fenBefore,
+                    fen_after: fenAfter
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`API error ${response.status}`);
+            }
+            
+            const analysis = await response.json();
+            this.displayMoveAnalysis(analysis);
+            
+        } catch (error) {
+            console.error('[Chess AI] Move analysis error:', error);
+        }
+    }
+    
+    displayMoveAnalysis(analysis) {
+        if (!analysis || analysis.error) {
+            console.error('[Chess AI] Move analysis error:', analysis);
+            return;
+        }
+        
+        const moveSection = this.overlay.querySelector('#your-move-section');
+        const qualityBadge = this.overlay.querySelector('#move-quality-badge');
+        const moveDetails = this.overlay.querySelector('#your-move-details');
+        const moveExplanation = this.overlay.querySelector('#move-explanation');
+        
+        if (!moveSection) return;
+        
+        // Show the section
+        moveSection.style.display = 'block';
+        
+        // Update quality badge
+        if (qualityBadge && analysis.comparison) {
+            const display = analysis.comparison.quality_display;
+            qualityBadge.textContent = display.emoji + ' ' + display.label;
+            qualityBadge.className = 'move-quality-badge quality-' + analysis.comparison.quality;
+            qualityBadge.style.background = display.badge_color;
+        }
+        
+        // Update move details
+        if (moveDetails && analysis.user_move) {
+            const userMove = analysis.user_move;
+            const score = userMove.evaluation;
+            moveDetails.innerHTML = `
+                <p class="move-name">Your move: <strong>${userMove.san}</strong></p>
+                <p class="move-evaluation">Evaluation: ${score.display || '0.00'}</p>
+            `;
+            
+            if (analysis.comparison && !analysis.comparison.is_best_move) {
+                moveDetails.innerHTML += `
+                    <p class="move-evaluation">Best was: <strong>${analysis.best_move.san}</strong></p>
+                `;
+            }
+        }
+        
+        // Update explanation
+        if (moveExplanation && analysis.explanation) {
+            moveExplanation.innerHTML = '<p>' + analysis.explanation + '</p>';
+        }
+        
+        this.lastMoveAnalysis = analysis;
     }
 }
 

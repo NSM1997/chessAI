@@ -1,13 +1,1 @@
-{
-  "fork": 1000,
-  "opening": 1000,
-  "short": 5000,
-  "pin": 1000,
-  "middlegame": 2000,
-  "backRankMate": 1000,
-  "endgame": 2000,
-  "mate": 1000,
-  "mateIn1": 1000,
-  "discoveredAttack": 1000,
-  "skewer": 1000
-}
+{}

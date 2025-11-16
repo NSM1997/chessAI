@@ -92,6 +92,179 @@ class TacticalCNN(nn.Module):
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
 
 
+class ResidualBlock(nn.Module):
+    """Residual block for ResNet architecture"""
+    
+    def __init__(self, in_channels, out_channels, stride=1):
+        super(ResidualBlock, self).__init__()
+        
+        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, 
+                              stride=stride, padding=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(out_channels)
+        self.relu = nn.ReLU(inplace=True)
+        
+        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3,
+                              stride=1, padding=1, bias=False)
+        self.bn2 = nn.BatchNorm2d(out_channels)
+        
+        # Shortcut connection
+        self.shortcut = nn.Sequential()
+        if stride != 1 or in_channels != out_channels:
+            self.shortcut = nn.Sequential(
+                nn.Conv2d(in_channels, out_channels, kernel_size=1, 
+                         stride=stride, bias=False),
+                nn.BatchNorm2d(out_channels)
+            )
+    
+    def forward(self, x):
+        residual = x
+        
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu(out)
+        
+        out = self.conv2(out)
+        out = self.bn2(out)
+        
+        out += self.shortcut(residual)
+        out = self.relu(out)
+        
+        return out
+
+
+class TacticalResNet(nn.Module):
+    """
+    ResNet-based architecture for tactical pattern recognition.
+    Uses residual connections for better gradient flow.
+    """
+    
+    def __init__(self, num_classes: int = 20, dropout_rate: float = 0.3):
+        super(TacticalResNet, self).__init__()
+        
+        self.num_classes = num_classes
+        self.dropout_rate = dropout_rate
+        
+        # Initial convolution
+        self.conv1 = nn.Sequential(
+            nn.Conv2d(12, 64, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True)
+        )
+        
+        # Residual blocks
+        self.layer1 = self._make_layer(64, 64, 2, stride=1)
+        self.layer2 = self._make_layer(64, 128, 2, stride=2)
+        self.layer3 = self._make_layer(128, 256, 2, stride=2)
+        
+        # Global average pooling
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+        
+        # Classifier
+        self.fc = nn.Sequential(
+            nn.Linear(256, 128),
+            nn.ReLU(),
+            nn.Dropout(dropout_rate),
+            nn.Linear(128, num_classes),
+            nn.Sigmoid()
+        )
+        
+        logger.info(f"TacticalResNet initialized with {self.count_parameters():,} parameters")
+    
+    def _make_layer(self, in_channels, out_channels, num_blocks, stride):
+        layers = []
+        layers.append(ResidualBlock(in_channels, out_channels, stride))
+        for _ in range(1, num_blocks):
+            layers.append(ResidualBlock(out_channels, out_channels))
+        return nn.Sequential(*layers)
+    
+    def forward(self, x):
+        # Input: (batch, 12, 8, 8)
+        x = self.conv1(x)
+        x = self.layer1(x)
+        x = self.layer2(x)
+        x = self.layer3(x)
+        x = self.avgpool(x)
+        x = torch.flatten(x, 1)
+        x = self.fc(x)
+        return x
+    
+    def count_parameters(self) -> int:
+        """Count total trainable parameters"""
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)
+
+
+class TacticalTransformer(nn.Module):
+    """
+    Transformer-based architecture for tactical pattern recognition.
+    Treats the chess board as a sequence of 64 squares.
+    """
+    
+    def __init__(self, num_classes: int = 20, d_model: int = 128, 
+                 nhead: int = 8, num_layers: int = 4, dropout_rate: float = 0.1):
+        super(TacticalTransformer, self).__init__()
+        
+        self.num_classes = num_classes
+        self.d_model = d_model
+        
+        # Embed each square (12 channels) into d_model dimensions
+        self.square_embedding = nn.Linear(12, d_model)
+        
+        # Positional encoding for 64 squares
+        self.pos_encoding = nn.Parameter(torch.randn(1, 64, d_model))
+        
+        # Transformer encoder
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model=d_model,
+            nhead=nhead,
+            dim_feedforward=d_model * 4,
+            dropout=dropout_rate,
+            batch_first=True
+        )
+        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
+        
+        # Classification head
+        self.classifier = nn.Sequential(
+            nn.LayerNorm(d_model),
+            nn.Linear(d_model, 256),
+            nn.ReLU(),
+            nn.Dropout(dropout_rate),
+            nn.Linear(256, num_classes),
+            nn.Sigmoid()
+        )
+        
+        logger.info(f"TacticalTransformer initialized with {self.count_parameters():,} parameters")
+    
+    def forward(self, x):
+        # Input: (batch, 12, 8, 8)
+        batch_size = x.size(0)
+        
+        # Reshape to treat as sequence of 64 squares
+        # (batch, 12, 8, 8) -> (batch, 8, 8, 12) -> (batch, 64, 12)
+        x = x.permute(0, 2, 3, 1).contiguous()
+        x = x.view(batch_size, 64, 12)
+        
+        # Embed each square
+        x = self.square_embedding(x)  # (batch, 64, d_model)
+        
+        # Add positional encoding
+        x = x + self.pos_encoding
+        
+        # Transformer encoding
+        x = self.transformer_encoder(x)  # (batch, 64, d_model)
+        
+        # Global average pooling over all squares
+        x = x.mean(dim=1)  # (batch, d_model)
+        
+        # Classification
+        x = self.classifier(x)  # (batch, num_classes)
+        
+        return x
+    
+    def count_parameters(self) -> int:
+        """Count total trainable parameters"""
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)
+
+
 class ChessBoardDataset(Dataset):
     """PyTorch Dataset for chess positions"""
     

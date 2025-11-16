@@ -1,0 +1,406 @@
+{
+  "timestamp": "2025-11-16T20:36:35.608795",
+  "model_type": "recall_optimized",
+  "test_dataset_size": 1500,
+  "num_themes": 20,
+  "theme_names": [
+    "fork",
+    "pin",
+    "skewer",
+    "discoveredAttack",
+    "doubleAttack",
+    "mate",
+    "mateIn1",
+    "mateIn2",
+    "attraction",
+    "deflection",
+    "interference",
+    "clearance",
+    "sacrifice",
+    "backRankMate",
+    "hangingPiece",
+    "trappedPiece",
+    "enPassant",
+    "promotion",
+    "underPromotion",
+    "xRayAttack"
+  ],
+  "detection_threshold": 0.3,
+  "models": [
+    {
+      "model": "CNN",
+      "parameters": 1038164,
+      "detection_threshold": 0.3,
+      "test_recall": 0.5749559082892416,
+      "test_precision": 0.185122089721749,
+      "test_f1": 0.2800687285223368,
+      "avg_per_theme_recall": 0.24204947968542173,
+      "detected_themes_count": 9,
+      "per_theme_metrics": {
+        "fork": {
+          "precision": 0.13615455381784727,
+          "recall": 0.7474747474747475,
+          "f1": 0.23035019455252917,
+          "support": 198
+        },
+        "pin": {
+          "precision": 0.07172995780590717,
+          "recall": 0.2073170731707317,
+          "f1": 0.10658307210031348,
+          "support": 82
+        },
+        "skewer": {
+          "precision": 0.021739130434782608,
+          "recall": 0.07407407407407407,
+          "f1": 0.03361344537815126,
+          "support": 27
+        },
+        "discoveredAttack": {
+          "precision": 0.06493506493506493,
+          "recall": 0.0684931506849315,
+          "f1": 0.06666666666666667,
+          "support": 73
+        },
+        "mate": {
+          "precision": 0.35239567233384855,
+          "recall": 0.9539748953974896,
+          "f1": 0.5146726862302483,
+          "support": 478
+        },
+        "mateIn1": {
+          "precision": 0.15906562847608455,
+          "recall": 0.6908212560386473,
+          "f1": 0.2585895117540687,
+          "support": 207
+        },
+        "mateIn2": {
+          "precision": 0.1694915254237288,
+          "recall": 0.6976744186046512,
+          "f1": 0.2727272727272727,
+          "support": 215
+        },
+        "attraction": {
+          "precision": 0.017241379310344827,
+          "recall": 0.019230769230769232,
+          "f1": 0.01818181818181818,
+          "support": 52
+        },
+        "deflection": {
+          "precision": 0.04697986577181208,
+          "recall": 0.1076923076923077,
+          "f1": 0.06542056074766354,
+          "support": 65
+        },
+        "interference": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 11
+        },
+        "clearance": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 21
+        },
+        "sacrifice": {
+          "precision": 0.07961783439490445,
+          "recall": 0.21008403361344538,
+          "f1": 0.11547344110854503,
+          "support": 119
+        },
+        "backRankMate": {
+          "precision": 0.375,
+          "recall": 0.2857142857142857,
+          "f1": 0.32432432432432434,
+          "support": 42
+        },
+        "hangingPiece": {
+          "precision": 0.05319148936170213,
+          "recall": 0.09433962264150944,
+          "f1": 0.06802721088435375,
+          "support": 53
+        },
+        "trappedPiece": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 21
+        },
+        "enPassant": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 1
+        },
+        "promotion": {
+          "precision": 0.2,
+          "recall": 0.2,
+          "f1": 0.2,
+          "support": 35
+        },
+        "xRayAttack": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 1
+        }
+      },
+      "epochs_trained": 22,
+      "training_date": "2025-11-16T18:32:52.147709",
+      "optimization_target": "recall",
+      "techniques": "focal_loss + pos_weights + low_threshold",
+      "color": "#3b82f6"
+    },
+    {
+      "model": "ResNet",
+      "parameters": 2815764,
+      "detection_threshold": 0.3,
+      "test_recall": 0.3321575543797766,
+      "test_precision": 0.2530228392297358,
+      "test_f1": 0.28723945094051856,
+      "avg_per_theme_recall": 0.12496408794361012,
+      "detected_themes_count": 5,
+      "per_theme_metrics": {
+        "fork": {
+          "precision": 0.15841584158415842,
+          "recall": 0.32323232323232326,
+          "f1": 0.21262458471760798,
+          "support": 198
+        },
+        "pin": {
+          "precision": 0.08771929824561403,
+          "recall": 0.06097560975609756,
+          "f1": 0.07194244604316546,
+          "support": 82
+        },
+        "skewer": {
+          "precision": 0.038461538461538464,
+          "recall": 0.037037037037037035,
+          "f1": 0.03773584905660377,
+          "support": 27
+        },
+        "discoveredAttack": {
+          "precision": 0.07936507936507936,
+          "recall": 0.0684931506849315,
+          "f1": 0.07352941176470588,
+          "support": 73
+        },
+        "mate": {
+          "precision": 0.42063492063492064,
+          "recall": 0.6652719665271967,
+          "f1": 0.5153970826580226,
+          "support": 478
+        },
+        "mateIn1": {
+          "precision": 0.22740524781341107,
+          "recall": 0.37681159420289856,
+          "f1": 0.28363636363636363,
+          "support": 207
+        },
+        "mateIn2": {
+          "precision": 0.20670391061452514,
+          "recall": 0.34418604651162793,
+          "f1": 0.2582897033158813,
+          "support": 215
+        },
+        "attraction": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 52
+        },
+        "deflection": {
+          "precision": 0.1,
+          "recall": 0.046153846153846156,
+          "f1": 0.06315789473684211,
+          "support": 65
+        },
+        "interference": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 11
+        },
+        "clearance": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 21
+        },
+        "sacrifice": {
+          "precision": 0.05434782608695652,
+          "recall": 0.04201680672268908,
+          "f1": 0.04739336492890995,
+          "support": 119
+        },
+        "backRankMate": {
+          "precision": 0.21428571428571427,
+          "recall": 0.14285714285714285,
+          "f1": 0.17142857142857143,
+          "support": 42
+        },
+        "hangingPiece": {
+          "precision": 0.09375,
+          "recall": 0.05660377358490566,
+          "f1": 0.07058823529411765,
+          "support": 53
+        },
+        "trappedPiece": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 21
+        },
+        "enPassant": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 1
+        },
+        "promotion": {
+          "precision": 0.2,
+          "recall": 0.08571428571428572,
+          "f1": 0.12,
+          "support": 35
+        },
+        "xRayAttack": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 1
+        }
+      },
+      "epochs_trained": 20,
+      "training_date": "2025-11-16T18:44:37.605411",
+      "optimization_target": "recall",
+      "techniques": "focal_loss + pos_weights + low_threshold",
+      "color": "#10b981"
+    },
+    {
+      "model": "Transformer",
+      "parameters": 841364,
+      "detection_threshold": 0.3,
+      "test_recall": 0.6649029982363316,
+      "test_precision": 0.18781135835270674,
+      "test_f1": 0.29289136345979544,
+      "avg_per_theme_recall": 0.2715387493287531,
+      "detected_themes_count": 6,
+      "per_theme_metrics": {
+        "fork": {
+          "precision": 0.13458856345885634,
+          "recall": 0.9747474747474747,
+          "f1": 0.23651960784313725,
+          "support": 198
+        },
+        "pin": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 82
+        },
+        "skewer": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 27
+        },
+        "discoveredAttack": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 73
+        },
+        "mate": {
+          "precision": 0.31866666666666665,
+          "recall": 1.0,
+          "f1": 0.4833164812942366,
+          "support": 478
+        },
+        "mateIn1": {
+          "precision": 0.14705882352941177,
+          "recall": 0.8695652173913043,
+          "f1": 0.25157232704402516,
+          "support": 207
+        },
+        "mateIn2": {
+          "precision": 0.17117117117117117,
+          "recall": 0.8837209302325582,
+          "f1": 0.28679245283018867,
+          "support": 215
+        },
+        "attraction": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 52
+        },
+        "deflection": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 65
+        },
+        "interference": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 11
+        },
+        "clearance": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 21
+        },
+        "sacrifice": {
+          "precision": 0.1174496644295302,
+          "recall": 0.5882352941176471,
+          "f1": 0.1958041958041958,
+          "support": 119
+        },
+        "backRankMate": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 42
+        },
+        "hangingPiece": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 53
+        },
+        "trappedPiece": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 21
+        },
+        "enPassant": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 1
+        },
+        "promotion": {
+          "precision": 0.12658227848101267,
+          "recall": 0.5714285714285714,
+          "f1": 0.20725388601036268,
+          "support": 35
+        },
+        "xRayAttack": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 1
+        }
+      },
+      "epochs_trained": 30,
+      "training_date": "2025-11-16T19:28:40.779728",
+      "optimization_target": "recall",
+      "techniques": "focal_loss + pos_weights + low_threshold",
+      "color": "#f59e0b"
+    }
+  ]
+}

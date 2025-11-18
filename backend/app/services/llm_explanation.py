@@ -217,32 +217,35 @@ class LLMExplanationService:
         tactical_themes: List[str],
         position_type: str
     ) -> str:
+        """Build an instruction prompt for explaining a single best move.
+
+        Important: we *do not* want the model to mention raw numeric evaluation scores
+        like +3.13 in the explanation; the user prefers verbal descriptions such as
+        "clear advantage" or "slightly better" instead.
         """
-        Build intelligent prompt with all context.
-        """
-        # Extract key information
+        # Extract simple, reliable context
         is_capture = move_impact.get('is_capture', False)
-        is_check = move_impact.get('is_check', False)
         moving_piece = self.piece_names.get(move_impact.get('moving_piece'), 'piece')
         captured_piece = self.piece_names.get(move_impact.get('captured_piece'), 'piece') if is_capture else None
-        
-        # Build simple, natural prompt - let GPT-4o use its chess knowledge
-        score = stockfish_eval.get('value', 0)
-        eval_text = f"{score/100:+.2f}"
-        
-        # Create minimal context
+
         if is_capture:
-            action = f"captures the {captured_piece}"
+            action = f"captures a {captured_piece}"
         else:
             action = f"moves the {moving_piece}"
-        
-        # Simple, natural prompt with strict 2-line limit
-        prompt = f"""You are a chess coach. Explain why {move_san} is the best move in this {position_type} position.
 
-Move: {move_san} {action}
-Evaluation: {eval_text}
+        # We still pass the FEN and analysis to ground the model in the actual
+        # position, but explicitly forbid mentioning raw scores.
+        prompt = f"""You are a chess coach explaining the engine's recommended move.
 
-Explain in EXACTLY 2 lines. Be very concise."""
+Position (FEN): {fen}
+Game phase: {position_type}
+Best move: {move_san} ({action}).
+Detected tactical themes (if any): {', '.join(tactical_themes) if tactical_themes else 'none'}.
+
+Explain in EXACTLY 2 short sentences why this move is strong.
+Focus on ideas like material, king safety, piece activity, development, and tactics.
+Do NOT mention numeric evaluation scores (like +3.13 or -0.80) or centipawn values.
+Use clear language suitable for a club-level player."""
 
         return prompt
     

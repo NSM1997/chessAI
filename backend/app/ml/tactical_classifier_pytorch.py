@@ -474,13 +474,13 @@ class TacticalClassifierTrainer:
 
 class TacticalClassifierService:
     """
-    Production inference service for tactical pattern classification.
+    Production inference service for tactical pattern classification using a single CNN.
     Used by the chess engine to enhance explanations with detected tactics.
     """
     
     def __init__(self, model_path: Optional[Path] = None):
         self.model = None
-        self.theme_names = []
+        self.theme_names: List[str] = []
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         
         if model_path and Path(model_path).exists():
@@ -494,38 +494,36 @@ class TacticalClassifierService:
             
             checkpoint = torch.load(model_path, map_location=self.device)
             
+            num_classes = int(checkpoint.get('num_classes', 20))
+            dropout_rate = float(checkpoint.get('dropout_rate', 0.5))
+            
             # Create and load model
             self.model = TacticalCNN(
-                num_classes=checkpoint['num_classes'],
-                dropout_rate=checkpoint['dropout_rate']
+                num_classes=num_classes,
+                dropout_rate=dropout_rate
             )
             self.model.load_state_dict(checkpoint['model_state_dict'])
             self.model.to(self.device)
             self.model.eval()
             
-            # Load theme names
-            theme_path = model_path.parent / 'theme_names.json'
-            if theme_path.exists():
-                with open(theme_path, 'r') as f:
-                    self.theme_names = json.load(f)
+            # Load theme names either from checkpoint or from theme_names.json
+            theme_names = checkpoint.get('theme_names')
+            if theme_names:
+                self.theme_names = list(theme_names)
+            else:
+                theme_path = model_path.parent / 'theme_names.json'
+                if theme_path.exists():
+                    with open(theme_path, 'r') as f:
+                        self.theme_names = json.load(f)
             
-            logger.info(f"Tactical classifier loaded: {len(self.theme_names)} themes")
+            logger.info(f"Tactical classifier loaded (single CNN): {len(self.theme_names)} themes")
             
         except Exception as e:
             logger.error(f"Error loading model: {e}")
             self.model = None
     
     def predict(self, board_tensor: np.ndarray, threshold: float = 0.5) -> List[Dict]:
-        """
-        Predict tactical themes from a board position
-        
-        Args:
-            board_tensor: Board representation (8, 8, 12)
-            threshold: Confidence threshold for theme detection
-        
-        Returns:
-            List of detected themes with confidence scores
-        """
+        """Predict tactical themes from a board position using a single CNN"""
         if self.model is None:
             return []
         
@@ -539,7 +537,7 @@ class TacticalClassifierService:
                 predictions = self.model(tensor).cpu().numpy()[0]
             
             # Filter by threshold
-            themes = []
+            themes: List[Dict[str, float]] = []
             for idx, confidence in enumerate(predictions):
                 if confidence >= threshold:
                     theme_name = self.theme_names[idx] if idx < len(self.theme_names) else f"theme_{idx}"
@@ -561,6 +559,154 @@ class TacticalClassifierService:
     def is_available(self) -> bool:
         """Check if model is loaded and ready"""
         return self.model is not None
+
+
+class EnsembleTacticalClassifierService:
+    """Ensemble of CNN, ResNet, and Transformer tactical classifiers.
+
+    Uses recall-optimised checkpoints if available and combines their predictions.
+    Default strategy is ANY/OR (maximize recall): a theme is predicted if ANY model
+    predicts it above the detection threshold.
+
+    If no ensemble checkpoints are found, this service falls back to a single
+    TacticalCNN model via TacticalClassifierService.
+    """
+    
+    def __init__(
+        self,
+        model_dir: Optional[Path] = None,
+        strategy: str = "ANY",
+        default_threshold: float = 0.3,
+    ) -> None:
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.models: List[Dict[str, Any]] = []  # {name, model}
+        self.theme_names: List[str] = []
+        self.strategy = strategy.upper()
+        self.default_threshold = float(default_threshold)
+        self.detection_threshold = float(default_threshold)
+        self.base_classifier: Optional[TacticalClassifierService] = None
+        
+        model_dir = Path(model_dir) if model_dir else Path("backend/models/saved_models")
+        self._load_ensemble_models(model_dir)
+        
+        # Fallback: if ensemble not available, try single CNN model
+        if not self.models:
+            fallback_path = model_dir / "tactical_classifier.pth"
+            if fallback_path.exists():
+                logger.warning("No recall-optimised ensemble checkpoints found; "
+                               "falling back to single CNN model")
+                self.base_classifier = TacticalClassifierService(fallback_path)
+            else:
+                logger.warning("No ensemble models or fallback CNN model found")
+    
+    def _load_ensemble_models(self, model_dir: Path) -> None:
+        """Load recall-optimised CNN, ResNet, and Transformer checkpoints if present."""
+        checkpoints = [
+            ("CNN", model_dir / "cnn_recall_optimized.pth", TacticalCNN),
+            ("ResNet", model_dir / "resnet_recall_optimized.pth", TacticalResNet),
+            ("Transformer", model_dir / "transformer_recall_optimized.pth", TacticalTransformer),
+        ]
+        
+        for name, path, model_cls in checkpoints:
+            if not path.exists():
+                continue
+            try:
+                ckpt = torch.load(path, map_location=self.device)
+                num_classes = int(ckpt.get('num_classes', 20))
+                model = model_cls(num_classes=num_classes)
+                model.load_state_dict(ckpt['model_state_dict'])
+                model.to(self.device)
+                model.eval()
+                
+                self.models.append({
+                    'name': name,
+                    'model': model,
+                })
+                
+                # Use theme names and detection threshold from first successful checkpoint
+                if not self.theme_names and ckpt.get('theme_names'):
+                    self.theme_names = list(ckpt['theme_names'])
+                if 'detection_threshold' in ckpt:
+                    self.detection_threshold = float(ckpt['detection_threshold'])
+                
+                logger.info(f"Loaded recall-optimised {name} model for ensemble from {path}")
+            except Exception as e:
+                logger.error(f"Failed to load ensemble model {name} from {path}: {e}")
+        
+        if self.models:
+            logger.info(f"Ensemble tactical classifier initialised with {len(self.models)} models")
+        
+    def _predict_ensemble_any(self, predictions: np.ndarray, threshold: float) -> np.ndarray:
+        """ANY/OR strategy: theme is active if ANY model predicts it above threshold.
+
+        Args:
+            predictions: Array of shape (M, num_classes) with model probabilities.
+            threshold: Detection threshold.
+        Returns:
+            Binary mask of shape (num_classes,) indicating active themes.
+        """
+        return (predictions >= threshold).any(axis=0).astype(bool)
+    
+    def predict(self, board_tensor: np.ndarray, threshold: Optional[float] = None) -> List[Dict]:
+        """Predict tactical themes using ensemble or fallback single model.
+
+        Args:
+            board_tensor: Board representation (8, 8, 12)
+            threshold: Optional detection threshold override.
+        Returns:
+            List of detected themes with confidence scores.
+        """
+        # Use ensemble if available
+        if self.models:
+            try:
+                th = float(threshold) if threshold is not None else self.detection_threshold
+                # Prepare input: (1, 12, 8, 8)
+                tensor = torch.FloatTensor(board_tensor).permute(2, 0, 1).unsqueeze(0)
+                tensor = tensor.to(self.device)
+                
+                # Collect predictions from all models: (M, num_classes)
+                all_preds = []
+                with torch.no_grad():
+                    for mdl in self.models:
+                        probs = mdl['model'](tensor).cpu().numpy()[0]
+                        all_preds.append(probs)
+                preds_array = np.stack(all_preds, axis=0)  # (M, C)
+                
+                # ANY/OR ensemble for maximum recall
+                active_mask = self._predict_ensemble_any(preds_array, th)
+                if not active_mask.any():
+                    return []
+                
+                # Confidence = max probability across models for each active theme
+                max_conf = preds_array.max(axis=0)
+                themes: List[Dict[str, float]] = []
+                for idx, is_active in enumerate(active_mask):
+                    if not is_active:
+                        continue
+                    theme_name = self.theme_names[idx] if idx < len(self.theme_names) else f"theme_{idx}"
+                    themes.append({
+                        'theme': theme_name,
+                        'confidence': float(max_conf[idx])
+                    })
+                
+                themes.sort(key=lambda x: x['confidence'], reverse=True)
+                return themes
+            except Exception as e:
+                logger.error(f"Error during ensemble prediction: {e}")
+                # Fall through to base classifier if available
+        
+        # Fallback single-model classifier
+        if self.base_classifier and self.base_classifier.is_available:
+            return self.base_classifier.predict(board_tensor, threshold or 0.5)
+        
+        return []
+    
+    @property
+    def is_available(self) -> bool:
+        """Check if any ensemble model or fallback classifier is available"""
+        if self.models:
+            return True
+        return self.base_classifier.is_available if self.base_classifier else False
 
 
 # Evaluation metrics

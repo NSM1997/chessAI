@@ -434,7 +434,9 @@ async def analyze_position(request: dict):
                     
                     print(f"[INFO] Generated intelligent explanation for {san_move}")
                 else:
-                    explanation = f"It's {turn}'s turn. The best move is {san_move} (evaluation: {score_value/100:+.2f})."
+                    # Simple fallback without exposing numeric engine score
+                    adv = "a strong" if abs(score_value) > 150 else "a slight"
+                    explanation = f"It's {turn}'s turn. The best move is {san_move}, giving {adv} advantage."
             except Exception as e:
                 print(f"[WARNING] Explanation generation failed: {e}, using simple fallback")
                 explanation = f"It's {turn}'s turn. The best move is {san_move} (evaluation: {score_value/100:+.2f})."
@@ -462,12 +464,12 @@ async def analyze_position(request: dict):
                 explanation = f"It's {turn}'s turn. The move {san_move} is a legal option in this {position_type}. (Engine unavailable - showing legal move)"
         
         # Generate tactical motifs and strategic concepts
-        tactical_motifs = []
-        strategic_concepts = []
+        tactical_motifs: list[str] = []
+        strategic_concepts: list[str] = []
         
         # Use Stockfish analysis if available
         if stockfish_analysis and stockfish_analysis.get('tactical_motifs'):
-            tactical_motifs = stockfish_analysis['tactical_motifs']
+            tactical_motifs = list(stockfish_analysis['tactical_motifs'])
         else:
             # Fallback tactical detection
             if board.is_check():
@@ -475,12 +477,16 @@ async def analyze_position(request: dict):
             if material_balance != 0:
                 tactical_motifs.append("material_advantage")
         
-        # Add ML-detected tactical themes to motifs
+        # Add ML-detected tactical themes to motifs (ensemble-based, already sorted by confidence)
         if ml_tactical_themes:
             for theme_info in ml_tactical_themes:
                 theme_name = theme_info['theme']
                 if theme_name not in tactical_motifs:
                     tactical_motifs.append(theme_name)
+        
+        # Limit motifs we expose in the API/extension UI to the top 2 for clarity
+        if len(tactical_motifs) > 2:
+            tactical_motifs = tactical_motifs[:2]
         
         # Strategic concepts based on position
         if position_type == "opening":
@@ -747,14 +753,24 @@ async def analyze_move(request: dict):
                 # Generate comparative explanation using LLM
                 from app.services.llm_explanation import LLMExplanationService
                 
-                # Create a concise prompt for faster generation
-                prompt = f"""Chess move analysis:
-User: {user_move_san} ({user_eval_score.get('display', '0.00')})
-Best: {best_move_san} ({best_move_data['score'].get('display', '0.00')})
-Quality: {quality} (-{cp_loss}cp)
+                # Create a grounded prompt that avoids numeric evals and
+                # discourages hallucinating non-existent pieces/squares.
+                prompt = f"""You are a chess coach comparing two moves in the same position.
 
-Explain in 2-3 sentences:
-{comparison['quality_display']['emoji']} Why is {best_move_san} better than {user_move_san}?"""
+Position (FEN): {fen_before}
+User move: {user_move_san}
+Engine best move: {best_move_san}
+Quality label for the user's move: {quality}.
+
+Explain in 2–3 sentences why the engine's move is better from a chess point of view.
+Focus on general ideas such as king safety, material, piece activity, development,
+and tactical threats (e.g. forks, pins, back-rank mate, etc.).
+Do NOT mention numeric evaluation scores or centipawn values.
+Avoid inventing specific pieces or pawns on squares that are not clearly implied
+by the moves themselves; if uncertain about concrete tactics, keep the explanation
+more general and conceptual.
+
+{comparison['quality_display']['emoji']} Give a concise, instructive explanation suitable for a club-level player."""
 
                 explanation = await llm_explanation_service.generate_raw_explanation(prompt)
                 

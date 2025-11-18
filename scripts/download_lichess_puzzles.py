@@ -141,13 +141,31 @@ def download_csv_sample(max_puzzles: int) -> List[Dict]:
     # Decompress using streaming
     print("[DECOMPRESSING]...")
     dctx = zstd.ZstdDecompressor()
+    
+    # Use streaming decompression for large files
+    decompressed_chunks = []
+    bytes_decompressed = 0
+    
     try:
-        # Try max_window_size parameter for large files
-        decompressed_data = dctx.decompress(bytes(compressed_data), max_output_size=10*1024*1024*1024)  # 10GB max
-    except:
-        # Alternative: decompress with different settings
+        # Stream decompress in chunks
+        stream_reader = dctx.stream_reader(io.BytesIO(bytes(compressed_data)))
+        while True:
+            chunk = stream_reader.read(1024 * 1024)  # Read 1MB at a time
+            if not chunk:
+                break
+            decompressed_chunks.append(chunk)
+            bytes_decompressed += len(chunk)
+            if bytes_decompressed % (10 * 1024 * 1024) == 0:  # Every 10MB
+                print(f"\rDecompressed: {bytes_decompressed / (1024*1024):.1f}MB", end='', flush=True)
+        
+        print(f"\rDecompressed: {bytes_decompressed / (1024*1024):.1f}MB")
+        decompressed_data = b''.join(decompressed_chunks)
+    except Exception as e:
+        print(f"\n[ERROR] Decompression failed: {e}")
+        print("[TRYING ALTERNATIVE METHOD]...")
+        # Try alternative decompression
         dctx = zstd.ZstdDecompressor(max_window_size=2**31)
-        decompressed_data = dctx.decompress(bytes(compressed_data))
+        decompressed_data = dctx.decompress(bytes(compressed_data), max_output_size=10*1024*1024*1024)
     
     print("[PARSING] Reading CSV data...")
     csv_text = decompressed_data.decode('utf-8')

@@ -12,7 +12,7 @@ import numpy as np
 from pathlib import Path
 import json
 import logging
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Any
 import time
 
 logging.basicConfig(level=logging.INFO)
@@ -902,7 +902,7 @@ class PrecisionEnsembleService:
         self,
         model_dir: Optional[Path] = None,
         strategy: str = "WEIGHTED",
-        default_threshold: float = 0.6,
+        default_threshold: float = 0.50,
     ) -> None:
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.models: List[Dict[str, Any]] = []  # {name, model, weight}
@@ -1053,6 +1053,188 @@ class PrecisionEnsembleService:
     def is_available(self) -> bool:
         """Check if precision ensemble models are loaded"""
         return len(self.models) > 0
+
+
+class HybridTacticalEnsemble:
+    """Hybrid Ensemble: Recall models for common tactics + Precision models for critical themes.
+    
+    Strategy:
+    - Common themes (fork, pin, skewer, discoveredAttack, doubleAttack, hangingPiece, 
+      trappedPiece, sacrifice, deflection, attraction, clearance, promotion):
+      Use recall-optimized ensemble (threshold 0.3) for better detection
+    
+    - Critical/Mate themes (mate, mateIn1, mateIn2, backRankMate, etc.):
+      Use precision-optimized ensemble (threshold 0.55) for accuracy
+    
+    This provides:
+    - Good coverage for basic tactical learning
+    - High accuracy for critical checkmate detection
+    """
+    
+    def __init__(self, model_dir: Optional[Path] = None):
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        model_dir = Path(model_dir) if model_dir else Path("backend/models/saved_models")
+        
+        # Define theme categories
+        self.common_themes = {
+            'fork', 'pin', 'skewer', 'discoveredAttack', 'doubleAttack', 
+            'hangingPiece', 'trappedPiece', 'sacrifice', 'deflection', 
+            'attraction', 'clearance', 'promotion'
+        }
+        
+        self.critical_themes = {
+            'mate', 'mateIn1', 'mateIn2', 'backRankMate'
+        }
+        
+        # Load recall-optimized models for common tactics
+        self.recall_models = self._load_recall_models(model_dir)
+        
+        # Load precision-optimized models for critical themes  
+        self.precision_models = self._load_precision_models(model_dir)
+        
+        # Get theme names (should be same across all models)
+        self.theme_names = []
+        if self.recall_models:
+            ckpt = torch.load(model_dir / "cnn_recall_optimized.pth", map_location=self.device)
+            self.theme_names = ckpt.get('theme_names', [])
+        elif self.precision_models:
+            ckpt = torch.load(model_dir / "cnn_precision_optimized.pth", map_location=self.device)
+            self.theme_names = ckpt.get('theme_names', [])
+        
+        logger.info(f"Hybrid ensemble initialized: {len(self.recall_models)} recall models, "
+                   f"{len(self.precision_models)} precision models")
+    
+    def _load_recall_models(self, model_dir: Path) -> List[Dict[str, Any]]:
+        """Load recall-optimized models for common tactics."""
+        models = []
+        checkpoints = [
+            ("CNN", model_dir / "cnn_recall_optimized.pth", TacticalCNN),
+            ("ResNet", model_dir / "resnet_recall_optimized.pth", TacticalResNet),
+        ]
+        
+        for name, path, model_cls in checkpoints:
+            if not path.exists():
+                continue
+            try:
+                ckpt = torch.load(path, map_location=self.device)
+                num_classes = int(ckpt.get('num_classes', 20))
+                model = model_cls(num_classes=num_classes)
+                model.load_state_dict(ckpt['model_state_dict'])
+                model.to(self.device)
+                model.eval()
+                models.append({'name': name, 'model': model})
+                logger.info(f"Loaded recall {name} for common tactics")
+            except Exception as e:
+                logger.error(f"Failed to load recall {name}: {e}")
+        
+        return models
+    
+    def _load_precision_models(self, model_dir: Path) -> List[Dict[str, Any]]:
+        """Load precision-optimized models for critical themes."""
+        models = []
+        checkpoints = [
+            ("CNN", model_dir / "cnn_precision_optimized.pth", TacticalCNN, 1.0),
+            ("ResNet", model_dir / "resnet_precision_optimized.pth", TacticalResNet, 1.1),
+            ("EfficientNet", model_dir / "efficientnet_precision_optimized.pth", TacticalEfficientNet, 1.3),
+        ]
+        
+        for name, path, model_cls, weight in checkpoints:
+            if not path.exists():
+                continue
+            try:
+                ckpt = torch.load(path, map_location=self.device)
+                num_classes = int(ckpt.get('num_classes', 20))
+                model = model_cls(num_classes=num_classes)
+                model.load_state_dict(ckpt['model_state_dict'])
+                model.to(self.device)
+                model.eval()
+                models.append({'name': name, 'model': model, 'weight': weight})
+                logger.info(f"Loaded precision {name} (weight={weight}) for critical themes")
+            except Exception as e:
+                logger.error(f"Failed to load precision {name}: {e}")
+        
+        return models
+    
+    def predict(self, board_tensor: np.ndarray, top_k: int = 5) -> List[Dict]:
+        """Predict using hybrid approach.
+        
+        Args:
+            board_tensor: Board representation (8, 8, 12)
+            top_k: Maximum number of themes to return
+        Returns:
+            List of detected themes with confidence scores
+        """
+        if not self.recall_models and not self.precision_models:
+            return []
+        
+        try:
+            # Prepare input
+            tensor = torch.FloatTensor(board_tensor).permute(2, 0, 1).unsqueeze(0)
+            tensor = tensor.to(self.device)
+            
+            final_predictions = {}
+            
+            # 1. Get predictions for COMMON themes from recall models (threshold 0.3)
+            if self.recall_models:
+                recall_preds = []
+                with torch.no_grad():
+                    for mdl in self.recall_models:
+                        probs = torch.sigmoid(mdl['model'](tensor)).cpu().numpy()[0]
+                        recall_preds.append(probs)
+                recall_array = np.stack(recall_preds, axis=0)
+                
+                # ANY strategy: max confidence across recall models
+                recall_conf = recall_array.max(axis=0)
+                
+                # Filter for common themes above threshold 0.3
+                for idx, theme_name in enumerate(self.theme_names):
+                    if theme_name in self.common_themes and recall_conf[idx] >= 0.3:
+                        final_predictions[theme_name] = {
+                            'theme': theme_name,
+                            'confidence': float(recall_conf[idx]),
+                            'source': 'recall'
+                        }
+            
+            # 2. Get predictions for CRITICAL themes from precision models (threshold 0.55)
+            if self.precision_models:
+                precision_preds = []
+                weights = []
+                with torch.no_grad():
+                    for mdl in self.precision_models:
+                        probs = torch.sigmoid(mdl['model'](tensor)).cpu().numpy()[0]
+                        precision_preds.append(probs)
+                        weights.append(mdl['weight'])
+                precision_array = np.stack(precision_preds, axis=0)
+                weights_array = np.array(weights)
+                
+                # WEIGHTED strategy for precision
+                weights_norm = weights_array / weights_array.sum()
+                precision_conf = (precision_array * weights_norm[:, np.newaxis]).sum(axis=0)
+                
+                # Filter for critical themes above threshold 0.55
+                for idx, theme_name in enumerate(self.theme_names):
+                    if theme_name in self.critical_themes and precision_conf[idx] >= 0.55:
+                        final_predictions[theme_name] = {
+                            'theme': theme_name,
+                            'confidence': float(precision_conf[idx]),
+                            'source': 'precision'
+                        }
+            
+            # Convert to list and sort by confidence
+            themes = list(final_predictions.values())
+            themes.sort(key=lambda x: x['confidence'], reverse=True)
+            
+            # Return top_k
+            return themes[:top_k]
+            
+        except Exception as e:
+            logger.error(f"Error in hybrid ensemble prediction: {e}")
+            return []
+    
+    @property
+    def is_available(self) -> bool:
+        """Check if hybrid ensemble is available."""
+        return len(self.recall_models) > 0 or len(self.precision_models) > 0
 
 
 # Evaluation metrics

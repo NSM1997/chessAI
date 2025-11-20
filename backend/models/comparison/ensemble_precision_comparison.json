@@ -1,0 +1,79 @@
+{
+  "timestamp": "2025-11-20T08:37:27.059376",
+  "model_type": "ensemble_precision_optimized",
+  "num_models": 2,
+  "models": [
+    "CNN",
+    "ResNet"
+  ],
+  "strategies": [
+    {
+      "name": "UNANIMOUS (AND)",
+      "precision": 0.7952853598014888,
+      "recall": 0.03837174498653098,
+      "f1": 0.07321112443606875,
+      "threshold": 0.6,
+      "description": "All models must agree (highest precision)"
+    },
+    {
+      "name": "MAJORITY",
+      "precision": 0.7952853598014888,
+      "recall": 0.03837174498653098,
+      "f1": 0.07321112443606875,
+      "threshold": 0.6,
+      "description": "At least 2 models agree"
+    },
+    {
+      "name": "ANY (OR)",
+      "precision": 0.7109929078014184,
+      "recall": 0.09601915594133494,
+      "f1": 0.16918938874531933,
+      "threshold": 0.6,
+      "description": "Any model predicts (higher recall)"
+    },
+    {
+      "name": "WEIGHTED",
+      "precision": 0.7705179282868526,
+      "recall": 0.057886860221490574,
+      "f1": 0.1076837416481069,
+      "threshold": 0.6,
+      "description": "Weighted by model precision"
+    },
+    {
+      "name": "ADAPTIVE (0.5)",
+      "precision": 0.6319980694980695,
+      "recall": 0.15677940736306495,
+      "f1": 0.25123507122643773,
+      "threshold": 0.5,
+      "description": "Lower threshold for balance"
+    },
+    {
+      "name": "CNN (Individual)",
+      "precision": 0.7210718635809987,
+      "recall": 0.07087698293923975,
+      "f1": 0.12906742246688832,
+      "threshold": 0.6,
+      "description": "Individual model"
+    },
+    {
+      "name": "ResNet (Individual)",
+      "precision": 0.7471830985915493,
+      "recall": 0.06351391798862616,
+      "f1": 0.11707586206896552,
+      "threshold": 0.6,
+      "description": "Individual model"
+    }
+  ],
+  "best_precision": {
+    "strategy": "UNANIMOUS (AND)",
+    "value": 0.7952853598014888
+  },
+  "best_recall": {
+    "strategy": "ADAPTIVE (0.5)",
+    "value": 0.15677940736306495
+  },
+  "best_f1": {
+    "strategy": "ADAPTIVE (0.5)",
+    "value": 0.25123507122643773
+  }
+}

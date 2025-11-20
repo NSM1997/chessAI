@@ -193,6 +193,110 @@ class TacticalResNet(nn.Module):
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
 
 
+class SEBlock(nn.Module):
+    """Squeeze-and-Excitation block for channel attention"""
+    
+    def __init__(self, channels, reduction=16):
+        super(SEBlock, self).__init__()
+        self.squeeze = nn.AdaptiveAvgPool2d(1)
+        self.excitation = nn.Sequential(
+            nn.Linear(channels, channels // reduction, bias=False),
+            nn.ReLU(inplace=True),
+            nn.Linear(channels // reduction, channels, bias=False),
+            nn.Sigmoid()
+        )
+    
+    def forward(self, x):
+        b, c, _, _ = x.size()
+        # Squeeze: global average pooling
+        y = self.squeeze(x).view(b, c)
+        # Excitation: FC -> ReLU -> FC -> Sigmoid
+        y = self.excitation(y).view(b, c, 1, 1)
+        # Scale: multiply input by channel attention weights
+        return x * y.expand_as(x)
+
+
+class TacticalSENet(nn.Module):
+    """
+    Squeeze-and-Excitation Network for tactical pattern recognition.
+    Uses channel attention to focus on important piece types.
+    
+    Better than vanilla CNN: Learns which pieces matter most for each tactic.
+    More efficient than Transformer: Fewer parameters, faster training.
+    """
+    
+    def __init__(self, num_classes: int = 20, dropout_rate: float = 0.4):
+        super(TacticalSENet, self).__init__()
+        
+        self.num_classes = num_classes
+        self.dropout_rate = dropout_rate
+        
+        # Conv block 1 with SE attention
+        self.conv1 = nn.Sequential(
+            nn.Conv2d(12, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+        )
+        self.se1 = SEBlock(64, reduction=8)
+        self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)  # 8x8 -> 4x4
+        
+        # Conv block 2 with SE attention
+        self.conv2 = nn.Sequential(
+            nn.Conv2d(64, 128, kernel_size=3, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(inplace=True),
+        )
+        self.se2 = SEBlock(128, reduction=16)
+        self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)  # 4x4 -> 2x2
+        
+        # Conv block 3 with SE attention
+        self.conv3 = nn.Sequential(
+            nn.Conv2d(128, 256, kernel_size=3, padding=1),
+            nn.BatchNorm2d(256),
+            nn.ReLU(inplace=True),
+        )
+        self.se3 = SEBlock(256, reduction=16)
+        
+        # Global average pooling
+        self.global_pool = nn.AdaptiveAvgPool2d((1, 1))
+        
+        # Classifier with attention-aware features
+        self.classifier = nn.Sequential(
+            nn.Linear(256, 256),
+            nn.ReLU(),
+            nn.Dropout(dropout_rate),
+            nn.Linear(256, 128),
+            nn.ReLU(),
+            nn.Dropout(dropout_rate),
+            nn.Linear(128, num_classes),
+            nn.Sigmoid()
+        )
+        
+        logger.info(f"TacticalSENet initialized with {self.count_parameters():,} parameters")
+    
+    def forward(self, x):
+        # Input: (batch, 12, 8, 8)
+        x = self.conv1(x)
+        x = self.se1(x)  # Channel attention
+        x = self.pool1(x)
+        
+        x = self.conv2(x)
+        x = self.se2(x)  # Channel attention
+        x = self.pool2(x)
+        
+        x = self.conv3(x)
+        x = self.se3(x)  # Channel attention
+        
+        x = self.global_pool(x)
+        x = torch.flatten(x, 1)
+        x = self.classifier(x)
+        return x
+    
+    def count_parameters(self) -> int:
+        """Count total trainable parameters"""
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)
+
+
 class TacticalTransformer(nn.Module):
     """
     Transformer-based architecture for tactical pattern recognition.

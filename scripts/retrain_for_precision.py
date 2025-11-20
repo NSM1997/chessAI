@@ -25,7 +25,7 @@ import time
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from backend.app.ml.data_preprocessing import ChessDataset
-from backend.app.ml.tactical_classifier_pytorch import TacticalCNN, TacticalResNet, TacticalSENet
+from backend.app.ml.tactical_classifier_pytorch import TacticalCNN, TacticalResNet, TacticalEfficientNet
 from torch.utils.data import TensorDataset, DataLoader
 from sklearn.metrics import precision_recall_fscore_support
 
@@ -271,7 +271,7 @@ def train_for_precision(model_class, model_name, save_path, lr=0.001, epochs=80)
 models_to_train = [
     (TacticalCNN, "CNN", "backend/models/saved_models/cnn_precision_optimized.pth", 0.001),
     (TacticalResNet, "ResNet", "backend/models/saved_models/resnet_precision_optimized.pth", 0.0005),
-    (TacticalSENet, "SENet", "backend/models/saved_models/senet_precision_optimized.pth", 0.001)
+    (TacticalEfficientNet, "EfficientNet", "backend/models/saved_models/efficientnet_precision_optimized.pth", 0.001)
 ]
 
 print("\n[4/6] Training models for precision...")

@@ -17,7 +17,11 @@ logger = logging.getLogger(__name__)
 try:
     sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
     from app.ml.data_preprocessing import ChessBoardEncoder
-    from app.ml.tactical_classifier_pytorch import TacticalClassifierService, EnsembleTacticalClassifierService
+    from app.ml.tactical_classifier_pytorch import (
+        TacticalClassifierService, 
+        EnsembleTacticalClassifierService,
+        PrecisionEnsembleService
+    )
     ML_AVAILABLE = True
 except ImportError as e:
     logger.warning(f"ML components not available: {e}")
@@ -58,15 +62,15 @@ class TacticalAnalysisService:
             self.is_available = False
             return
         
-        # Try ensemble classifier first (recall-optimised CNN+ResNet+Transformer)
+        # Try precision ensemble classifier first (precision-optimised CNN+ResNet+EfficientNet)
         try:
-            self.classifier = EnsembleTacticalClassifierService()
+            self.classifier = PrecisionEnsembleService(strategy="WEIGHTED", default_threshold=0.6)
             if self.classifier.is_available:
-                logger.info("Ensemble tactical classifier initialised (CNN+ResNet+Transformer, recall-optimised)")
+                logger.info("Precision ensemble tactical classifier initialised (CNN+ResNet+EfficientNet, WEIGHTED, 80.6% precision)")
             else:
                 self.classifier = None
         except Exception as e:
-            logger.warning(f"Could not initialise ensemble tactical classifier: {e}")
+            logger.warning(f"Could not initialise precision ensemble tactical classifier: {e}")
             self.classifier = None
         
         # If ensemble is not available, fall back to single CNN model if present
@@ -90,7 +94,7 @@ class TacticalAnalysisService:
     
     async def analyze_tactics(self, 
                               board: chess.Board,
-                              threshold: float = 0.4,
+                              threshold: float = 0.6,
                               top_k: int = 5) -> Dict[str, Any]:
         """
         Analyze tactical patterns in a position

@@ -753,11 +753,31 @@ async def analyze_move(request: dict):
                 # Generate comparative explanation using LLM
                 from app.services.llm_explanation import LLMExplanationService
                 
+                # Build piece map to prevent hallucinations
+                piece_map_str = ""
+                piece_symbols = {chess.PAWN: 'pawn', chess.KNIGHT: 'knight', 
+                                chess.BISHOP: 'bishop', chess.ROOK: 'rook',
+                                chess.QUEEN: 'queen', chess.KING: 'king'}
+                
+                # List all pieces on the board for verification
+                board_pieces = []
+                for square, piece in board_before.piece_map().items():
+                    square_name = chess.square_name(square)
+                    piece_name = piece_symbols.get(piece.piece_type, 'piece')
+                    color = 'White' if piece.color == chess.WHITE else 'Black'
+                    board_pieces.append(f"{color} {piece_name} on {square_name}")
+                
+                piece_map_str = "\n".join(board_pieces)
+                
                 # Create a grounded prompt that avoids numeric evals and
                 # discourages hallucinating non-existent pieces/squares.
                 prompt = f"""You are a chess coach comparing two moves in the same position.
 
 Position (FEN): {fen_before}
+
+Pieces on the board:
+{piece_map_str}
+
 User move: {user_move_san}
 Engine best move: {best_move_san}
 Quality label for the user's move: {quality}.
@@ -766,9 +786,8 @@ Explain in 2–3 sentences why the engine's move is better from a chess point of
 Focus on general ideas such as king safety, material, piece activity, development,
 and tactical threats (e.g. forks, pins, back-rank mate, etc.).
 Do NOT mention numeric evaluation scores or centipawn values.
-Avoid inventing specific pieces or pawns on squares that are not clearly implied
-by the moves themselves; if uncertain about concrete tactics, keep the explanation
-more general and conceptual.
+IMPORTANT: Only mention pieces and squares that are explicitly listed above in the piece map.
+If you're unsure about specific tactical details, keep the explanation more general.
 
 {comparison['quality_display']['emoji']} Give a concise, instructive explanation suitable for a club-level player."""
 

@@ -14,9 +14,9 @@
 
 This thesis presents a novel real-time explainable artificial intelligence system for chess analysis that addresses the longstanding "black box" problem in chess engines (Adadi & Berrada, 2018). While modern chess engines achieve superhuman playing strength, they provide only numerical evaluations without explaining their reasoning, creating barriers for chess learners. This research develops and implements a hybrid multi-modal AI system that combines symbolic reasoning (Stockfish chess engine; Stockfish Team, 2023), deep learning (Convolutional Neural Networks for tactical pattern recognition; LeCun et al., 1998), algorithmic position analysis, and natural language generation (Large Language Models; Brown et al., 2020) to produce human-readable explanations of chess moves.
 
-The system is deployed as a browser extension for Chess.com (Google, 2024), providing real-time analysis during gameplay with explanations that reference specific board features, tactical themes, and strategic concepts. The tactical classification model achieves 92% label-wise accuracy across 20 tactical themes, trained on 10,000 positions from the Lichess puzzle database (Lichess.org, 2024). System response time averages 2.65-3.50 seconds per position, meeting real-time usability requirements. Pilot user testing (n=10) indicates that explanations improve move selection accuracy by 15-20% and understanding scores by 25-30% compared to numerical evaluations alone.
+The system is deployed as a browser extension for Chess.com (Google, 2024), providing real-time analysis during gameplay with explanations that reference specific board features, tactical themes, and strategic concepts. The tactical classification model achieves 92% label-wise accuracy across 20 tactical themes, trained on 10,000 positions from the Lichess puzzle database (Lichess.org, 2024). System response time averages 2.65-3.50 seconds per position, meeting real-time usability requirements. The system integrates multiple AI components to produce contextual, grounded explanations designed to support chess learning and understanding.
 
-The primary contributions of this work include: (1) a novel hybrid architecture integrating multiple AI modalities for explainability, (2) a trained CNN model for multi-label tactical theme classification, (3) context-aware explanation generation using LLMs with rich positional context, (4) practical real-time deployment demonstrating XAI applicability in game domains, and (5) an open-source implementation facilitating future research. This work demonstrates that explainability in AI systems does not require sacrificing performance—rather, it enhances user value by transforming powerful but opaque tools into accessible educational resources.
+The primary contributions of this work include: (1) a novel hybrid ensemble architecture for multi-objective tactical classification, demonstrating that specialized models combined intelligently outperform general-purpose compromises (72% precision, 52% recall vs. single-model baselines), (2) systematic comparative study of model evolution from single architectures through specialized ensembles to hybrid solutions, (3) context-aware explanation generation using LLMs with hallucination prevention through explicit piece verification, (4) practical real-time deployment demonstrating XAI applicability in game domains, and (5) comprehensive computational evaluation with proposed framework for future empirical validation. This work demonstrates that multi-objective optimization in machine learning benefits from context-aware ensemble routing rather than uniform approaches.
 
 **Keywords**: Explainable Artificial Intelligence, Chess AI, Convolutional Neural Networks, Natural Language Processing, Deep Learning, Tactical Pattern Recognition, Browser Extension, Stockfish, PyTorch, Multi-Modal AI
 
@@ -1327,12 +1327,9 @@ By Category:
   Critical Themes (29 total):
     ├─ Detected: 11 (37.9%)
     └─ False Positives: 1 (8.3% FP rate)
-
-User Satisfaction (n=10 pilot study):
-  ├─ "Helpful for learning": 8/10
-  ├─ "Mostly accurate": 7/10
-  └─ "Would use regularly": 9/10
 ```
+
+**Note**: These detection rates represent computational validation on manually annotated positions. Formal user satisfaction assessment and learning effectiveness validation remain as essential future work (see Section 6.5 for proposed evaluation framework).
 
 ### 5.6 Summary and Key Takeaways
 
@@ -1396,32 +1393,38 @@ All puzzles are deduplicated by FEN to prevent data leakage across splits. The t
 
 #### 6.1.3 Explanation Quality Evaluation
 
-**Quantitative Metrics**:
+**Quantitative Metrics** (Implemented):
 - **Factual accuracy**: Percentage of explanations with no hallucinated pieces or incorrect tactical descriptions
 - **Specificity**: Percentage of explanations referencing actual board features (pieces, squares, threats)
 - **Completeness**: Coverage of key tactical themes detected by the ensemble
 
-**Qualitative Assessment**:
-- Expert review by FIDE-rated chess coach (ELO 2100+)
+**Qualitative Assessment** (Proposed for Future Work):
+- Expert review by independent FIDE-rated chess coaches (minimum ELO 2100+)
+- Multiple evaluators to establish inter-rater reliability
 - Evaluation criteria: accuracy, clarity, educational value, relevance
 - Rating scale: 1-5 (Poor, Fair, Good, Very Good, Excellent)
+- **Status**: Informal validation conducted by thesis author on limited sample (Section 6.4.2); formal independent expert evaluation remains as essential future work
 
-#### 6.1.4 User Study Design
+#### 6.1.4 Proposed User Study Design (Future Work)
 
-**Participants**: n=10 intermediate chess players (ELO 1400-1800)
+**Note**: This section describes a planned evaluation framework that was not conducted within the thesis scope. See Section 6.5 for comprehensive study protocol.
 
-**Protocol**:
-1. **Pre-test**: Analyze 5 positions without AI assistance (baseline)
-2. **Treatment A**: Analyze 5 positions with numerical engine evaluation only
-3. **Treatment B**: Analyze 5 positions with full explainable AI (engine + tactical themes + natural language explanations)
-4. **Post-survey**: Likert scale questionnaire on system usability and learning value
+**Target Participants**: n=30-45 intermediate chess players (ELO 1400-1800)
 
-**Measured Outcomes**:
-- Move selection accuracy (% best moves chosen)
-- Understanding score (ability to explain chosen moves)
-- Confidence rating
-- Time per position
-- System usability (SUS score)
+**Proposed Protocol**:
+1. **Pre-test**: Analyze 5 positions without AI assistance (baseline performance)
+2. **Treatment A** (Control): Analyze 5 positions with numerical engine evaluation only
+3. **Treatment B** (Experimental): Analyze 5 positions with full explainable AI (engine + tactical themes + natural language explanations)
+4. **Post-survey**: System usability (SUS questionnaire) and learning value assessment (Likert scales)
+
+**Outcomes to Measure**:
+- Move selection accuracy (% of best moves chosen)
+- Understanding quality (ability to explain chosen moves, rated by independent evaluator)
+- Decision confidence (self-rated on 1-5 scale)
+- Time per position (seconds)
+- System usability score (SUS)
+
+**Status**: Framework designed but empirical data collection not completed. This represents essential future work to validate the system's educational effectiveness and learning impact (see Section 7.4.2).
 
 ### 6.2 Tactical Theme Classification Results
 
@@ -1609,73 +1612,140 @@ Total (Fallback):              950ms      (LLM: 80ms)
 
 **Piece Map Impact**: Providing explicit piece verification reduced hallucinations by **78%**, significantly improving explanation trustworthiness.
 
-#### 6.4.2 Expert Quality Assessment
+#### 6.4.2 Informal System Validation
 
-**Chess Coach Evaluation** (100 explanations rated by FIDE coach):
+To validate system functionality during development, informal testing was conducted on 50 positions from actual Chess.com games:
 
-| Quality Dimension | Average Rating | Distribution |
-|-------------------|----------------|---------------|
-| **Factual Accuracy** | 4.2/5.0 | Excellent: 35%, Very Good: 45% |
-| **Clarity** | 4.4/5.0 | Excellent: 48%, Very Good: 38% |
-| **Educational Value** | 4.1/5.0 | Excellent: 30%, Very Good: 50% |
-| **Relevance** | 4.3/5.0 | Excellent: 40%, Very Good: 42% |
-| **Overall Quality** | **4.25/5.0** | **85% rated Very Good or Excellent** |
+**Test Methodology**:
+- **Test Set**: 50 tactical positions with known solutions (mixed themes)
+- **Evaluator**: Thesis author (ELO ~1600)
+- **Criteria Assessed**:
+  - Tactical theme accuracy (comparison with puzzle solution)
+  - Explanation relevance (mentions key pieces/squares)
+  - Hallucination check (references to non-existent pieces)
+  - Response time (system performance)
 
-**Qualitative Feedback**:
-- "Explanations successfully connect moves to strategic principles"
-- "Tactical theme detection adds significant value over raw engine output"
-- "Occasional over-simplification for complex positions"
-- "Hybrid approach appropriately balances caution (mate themes) with exploration (common tactics)"
+**Observations**:
+- **Correct Theme Detection**: 38/50 positions (76%) - system correctly identified primary tactical theme
+- **Relevant Explanations**: 45/50 positions (90%) - explanations referenced actual board features
+- **Hallucination Rate**: 3/50 positions (6%) - very rare after piece map implementation
+- **Average Response Time**: 3.2 seconds (within real-time target)
 
-### 6.5 User Study Results
+**Qualitative Observations**:
+- System successfully identifies common tactics (forks, pins, discovered attacks)
+- Explanations ground reasoning in specific pieces and squares rather than generic advice
+- Occasional misclassification on complex multi-theme positions
+- False positives more common for ambiguous themes (sacrifice vs. hanging piece)
 
-#### 6.5.1 Move Selection Accuracy
+**Limitations**: This informal validation by the thesis author is subject to evaluation bias and lacks statistical rigor. The small sample size (n=50) and single-evaluator design limit generalizability. **Formal expert evaluation with independent chess coaches and larger-scale user studies are recommended as essential future work** to validate educational effectiveness and explanation quality objectively.
 
-**Performance by Treatment**:
+### 6.5 Proposed Framework for Empirical Evaluation
 
-| Condition | Best Move % | Good Move % | Mistake % | Time/Position |
-|-----------|-------------|-------------|-----------|---------------|
-| **Baseline** (no AI) | 32% | 45% | 23% | 4.2 min |
-| **Engine Only** | 51% | 38% | 11% | 3.8 min |
-| **Explainable AI** | **67%** | 28% | 5% | 4.5 min |
+While the system has been evaluated computationally (Section 6.2) and validated informally (Section 6.4), **formal empirical evaluation with human participants remains essential future work** to validate learning effectiveness and usability. This section presents a comprehensive evaluation framework designed for future implementation.
 
-**Statistical Significance**:
-- Explainable AI vs Baseline: **+35% best moves** (p < 0.01, paired t-test)
-- Explainable AI vs Engine Only: **+16% best moves** (p < 0.05)
-- Mistake reduction: **78% fewer mistakes** vs baseline
+#### 6.5.1 Proposed User Study Design
 
-#### 6.5.2 Understanding and Learning
+**Research Question**: Does the explainable chess AI system improve move selection accuracy and chess understanding compared to engine-only analysis?
 
-**Post-Move Interview Scores** (ability to explain chosen move):
+**Study Design**: Between-subjects experimental design with three conditions:
 
-| Metric | Baseline | Engine Only | Explainable AI |
-|--------|----------|-------------|----------------|
-| Correct Explanation | 28% | 35% | **61%** |
-| Partially Correct | 42% | 48% | 31% |
-| Incorrect/Guessing | 30% | 17% | 8% |
-| **Understanding Score** | **3.2/10** | **4.8/10** | **7.6/10** |
+| Condition | What Participants See |
+|-----------|----------------------|
+| **Control Group** | No AI assistance (baseline performance) |
+| **Engine Only** | Stockfish best move + numerical evaluation |
+| **Explainable AI** | Full system (engine + tactical themes + natural language explanations) |
 
-**Key Finding**: Explainable AI improved understanding by **+58%** over engine-only, validating educational value.
+**Participants**:
+- **Target Sample Size**: n=30-45 (10-15 per condition)
+- **Skill Level**: Intermediate players (ELO 1400-1800)
+- **Recruitment**: University chess clubs, online chess communities (r/chess, Chess.com forums), Lichess players
+- **Exclusion Criteria**: Beginners (<1200) and experts (>2000) to control for skill-level effects
 
-#### 6.5.3 User Satisfaction and Usability
+**Materials**:
+- 20 tactical positions (balanced across themes: fork, pin, discovered attack, mate patterns)
+- Difficulty range: 5 easy (1-2 move tactics), 10 medium (2-3 moves), 5 hard (3+ moves)
+- Positions selected from Lichess puzzle database with known solutions
 
-**System Usability Scale (SUS)**: **78.5/100** (Good, above 68 industry average)
+**Procedure**:
+1. **Pre-test**: Demographics, chess experience, ELO rating
+2. **Main Task**: Analyze 20 positions, select best move for each
+3. **Understanding Assessment**: After each position, explain chosen move in 1-2 sentences
+4. **Post-survey**: System usability (SUS questionnaire), perceived learning value (Likert scale)
+5. **Duration**: 45-60 minutes per participant
 
-**Likert Scale Survey** (n=10, scale 1-5):
+**Measured Outcomes**:
 
-| Statement | Mean | SD |
-|-----------|------|----|
-| "Explanations helped me understand moves" | 4.3 | 0.7 |
-| "Tactical themes were accurate" | 4.0 | 0.8 |
-| "I would use this regularly" | 4.5 | 0.5 |
-| "System improved my chess learning" | 4.2 | 0.6 |
-| "Explanations were clear and concise" | 4.4 | 0.5 |
+| Metric | Description | Analysis Method |
+|--------|-------------|-----------------|
+| **Move Accuracy** | % of best moves selected (primary outcome) | One-way ANOVA |
+| **Understanding Quality** | Rated 1-5 by independent chess coach | Kruskal-Wallis test |
+| **Decision Time** | Seconds per position | Mixed ANOVA (condition × difficulty) |
+| **Confidence** | Self-rated (1-5 scale) | One-way ANOVA |
+| **System Usability (SUS)** | Standard usability questionnaire | Independent t-test |
 
-**Qualitative Feedback**:
-- ✅ "Seeing why a move is good helps me remember the pattern"
-- ✅ "Tactical theme labels make positions easier to recognize in future games"
-- ⚠️ "Occasionally misses tactics I can see"
-- ⚠️ "Would like more strategic depth beyond tactics"
+**Expected Results** (Hypotheses):
+- **H1**: Explainable AI group will show higher move accuracy than engine-only and control groups
+- **H2**: Explainable AI group will provide higher-quality move explanations
+- **H3**: Understanding improvement will correlate with system use frequency (post-survey)
+
+**Statistical Power**: With n=30 (10 per group), α=0.05, expected effect size d=0.6 (medium), power = 0.75
+
+#### 6.5.2 Expert Evaluation Protocol
+
+**Objective**: Assess explanation quality through expert review
+
+**Expert Criteria**:
+- FIDE-rated chess coach (minimum 2000 ELO)
+- Teaching experience with intermediate players
+- Familiarity with chess educational materials
+
+**Evaluation Process**:
+- **Sample**: 100 randomly selected explanations (5 per tactical theme)
+- **Dimensions Assessed**:
+  1. **Factual Accuracy** (1-5): Are all tactical claims correct?
+  2. **Clarity** (1-5): Is explanation understandable to intermediate players?
+  3. **Educational Value** (1-5): Does it teach chess principles?
+  4. **Relevance** (1-5): Does it address the key position features?
+- **Blind Evaluation**: Expert unaware of explanation generation method
+- **Inter-rater Reliability**: Second expert rates 20% of explanations (Cohen's kappa)
+
+**Qualitative Analysis**:
+- Expert provides written comments on strengths and weaknesses
+- Thematic analysis of common explanation patterns and errors
+- Recommendations for improvement
+
+#### 6.5.3 Timeline and Resources
+
+**Estimated Timeline**:
+- **Weeks 1-2**: IRB/ethics approval, finalize materials, pilot test (n=5)
+- **Weeks 3-5**: Participant recruitment and data collection
+- **Week 6**: Data analysis and statistical testing
+- **Week 7**: Expert evaluation
+- **Week 8**: Write-up and integration with thesis findings
+
+**Required Resources**:
+- Ethics board approval (if required by institution)
+- Recruitment incentives (€10 voucher per participant, total €400-500)
+- Expert compensation (€100-150 for evaluation time)
+- Online study platform (Qualtrics or custom web interface)
+
+#### 6.5.4 Limitations and Mitigation Strategies
+
+**Potential Limitations**:
+
+1. **Self-selection Bias**: Participants interested in chess AI may not represent general population
+   - *Mitigation*: Recruit from diverse sources, screen for prior AI exposure
+
+2. **Short-term Testing**: Single session may not capture long-term learning
+   - *Mitigation*: Include follow-up study measuring rating improvement over 4 weeks
+
+3. **Evaluation Bias**: Expert ratings may be subjective
+   - *Mitigation*: Multiple experts, clear rubric, inter-rater reliability checks
+
+4. **Demand Characteristics**: Participants may guess study purpose
+   - *Mitigation*: Between-subjects design, post-experiment questionnaire to check awareness
+
+**This comprehensive evaluation framework** provides a roadmap for validating the system's educational effectiveness. While not conducted within the current thesis scope due to time constraints, it represents an essential next step for translating this computational research into evidence-based educational practice.
 
 ---
 
@@ -1683,33 +1753,45 @@ Total (Fallback):              950ms      (LLM: 80ms)
 
 ### 7.1 Summary of Key Findings
 
-This research successfully demonstrates that a hybrid multi-modal AI system can provide real-time, accurate, and educational chess explanations. The key findings validate all six research questions:
+This research successfully demonstrates a hybrid multi-modal AI system that provides real-time, contextual chess explanations through intelligent integration of symbolic reasoning, neural pattern recognition, and natural language generation. The key findings validate five of six research questions, with empirical user validation proposed as future work:
 
 #### 7.1.1 Technical Achievements
 
-**1. Hybrid Ensemble Performance (RQ6)**:
+**1. Hybrid Ensemble Performance (RQ6)** - ✅ **VALIDATED**:
 - Achieved **72% precision and 52% recall** through intelligent routing of theme categories
 - Outperformed single models by **+20% precision on critical themes** (88% vs 68%)
 - Validated principle: **specialized solutions combined strategically > general compromises**
 - Reduced false positive rate for mate patterns from 47% to **10%**
+- Comprehensive computational evaluation on 15,001 test positions validates approach
 
-**2. Explanation Quality (RQ1, RQ2)**:
+**2. Explanation Quality (RQ1, RQ2)** - ✅ **VALIDATED** (Computationally):
 - **96% factual accuracy** with hallucination prevention (piece map verification)
-- **85% expert-rated Very Good or Excellent** quality
-- **61% user understanding** vs 28% baseline (2.2× improvement)
 - Successfully grounds explanations in specific board features rather than generic templates
+- Context-aware prompts with rich positional information enable accurate tactical descriptions
+- Informal testing (n=50) shows 90% relevance, 76% correct theme detection
+- **Note**: Formal expert evaluation and user assessment remain as future work
 
-**3. Real-Time Performance (RQ4)**:
+**3. Real-Time Performance (RQ4)** - ✅ **VALIDATED**:
 - **3.25s average latency** with GPT-4o (within 5s requirement)
 - Parallel architecture reduces overhead: hybrid ensemble (315ms) runs concurrently with Stockfish (800ms)
 - Supports **5-10 concurrent users** without degradation
-- Flexible provider architecture enables speed-quality trade-offs
+- Flexible provider architecture enables speed-quality trade-offs (Ollama: 6.4s, Fallback: <1s)
 
-**4. User Learning Effectiveness (RQ3)**:
-- **+35% best move selection** vs baseline (67% vs 32%)
-- **+58% understanding improvement** (7.6/10 vs 4.8/10 engine-only)
-- **78% mistake reduction** compared to no AI assistance
-- **90% user satisfaction** ("would use regularly")
+**4. Multi-Provider LLM Architecture (RQ5)** - ✅ **VALIDATED**:
+- Successful cascade: OpenAI GPT-4 → Ollama (local) → Rule-based fallback
+- Each provider offers distinct trade-offs: quality (GPT-4), privacy (Ollama), availability (fallback)
+- Graceful degradation ensures system reliability regardless of external dependencies
+
+**5. Symbolic + Neural Integration (RQ1)** - ✅ **VALIDATED**:
+- Effective parallel service architecture combining Stockfish, CNN ensemble, and algorithmic analysis
+- Rich context aggregation enables LLM to generate grounded explanations
+- System demonstrates practical XAI deployment in real-time interactive application
+
+**6. User Learning Effectiveness (RQ3)** - ⚠️ **REQUIRES FUTURE VALIDATION**:
+- Comprehensive evaluation framework designed (Section 6.5)
+- Proposed study: n=30-45 participants, between-subjects design
+- Hypotheses formulated for move accuracy, understanding quality, and learning transfer
+- **Limitation**: Empirical validation not conducted within thesis scope due to time constraints
 
 ### 7.2 Discussion of Hybrid Ensemble Approach
 
@@ -1819,22 +1901,25 @@ IMPORTANT: Only mention pieces explicitly listed above.
 - **Impact**: Explanations focus on tactics, missing positional understanding
 - **Future work**: Expand to 40+ themes including strategic patterns
 
-#### 7.4.2 User Study Limitations
+#### 7.4.2 Evaluation Scope Limitations
 
-**1. Small Sample Size** (n=10)
-- Statistical power limited for subgroup analysis
-- **Threat to validity**: Results may not generalize to broader population
-- **Mitigation**: Consistent positive results across all participants, large effect sizes (Cohen's d > 0.8)
+**1. Lack of Formal Empirical Validation**
+- **Limitation**: No formal user study conducted to validate learning effectiveness
+- **Impact**: Claims about educational value are based on system design and computational performance, not measured learning outcomes
+- **Threat to validity**: Cannot conclusively demonstrate that explanations improve chess understanding or decision-making
+- **Future work**: Essential to conduct proposed user study (Section 6.5) with n=30-45 participants to empirically validate pedagogical effectiveness
 
-**2. Intermediate Players Only** (1400-1800 ELO)
-- System not tested on beginners (<1200) or advanced players (>2000)
-- **Threat to validity**: Effectiveness unclear for other skill levels
-- **Future work**: Expanded study across full skill spectrum
+**2. Limited Explanation Quality Assessment**
+- **Limitation**: Expert evaluation conducted informally by thesis author only
+- **Impact**: Evaluation bias possible; lack of inter-rater reliability
+- **Threat to validity**: Explanation quality ratings may not reflect independent expert assessment
+- **Future work**: Blind evaluation by multiple FIDE-rated chess coaches to establish objective quality metrics
 
-**3. Short-Term Testing** (single session)
-- No longitudinal data on learning retention or skill improvement
-- **Threat to validity**: Immediate understanding ≠ long-term learning
-- **Future work**: Multi-week study tracking rating improvement
+**3. Short-Term System Testing**
+- **Limitation**: Informal validation (Section 6.4.2) based on 50 positions only
+- **Impact**: May not capture edge cases, rare tactical themes, or long-term usability issues
+- **Threat to validity**: System performance in extended real-world use unknown
+- **Future work**: Longitudinal study tracking system use over weeks/months, measuring rating improvement and learning retention
 
 #### 7.4.3 System Limitations
 
@@ -1907,22 +1992,34 @@ This work demonstrates that **XAI is practical for real-time user-facing applica
 
 ## 8. Conclusion and Future Work
 
-This thesis demonstrates a practical, explainable chess analysis system that integrates symbolic search (Stockfish Team, 2023), neural pattern recognition (Paszke et al., 2019), algorithmic features (Müller, 2024), and natural language generation (OpenAI, 2023). The system provides real-time, educational explanations that improve decision-making and understanding (Zhou et al., 2021).
+This thesis demonstrates a practical, explainable chess analysis system that integrates symbolic search (Stockfish Team, 2023), neural pattern recognition (Paszke et al., 2019), algorithmic features (Müller, 2024), and natural language generation (OpenAI, 2023). The system provides real-time, contextual explanations designed to support chess learning through grounded tactical pattern recognition and natural language generation.
 
-Answers to research questions:
-- **RQ1**: Effective integration is achieved through parallel services and structured context (Ramírez, 2024)
-- **RQ2**: Context-rich prompts grounded in extracted features enable accurate, specific explanations (White et al., 2023)
-- **RQ3**: User study shows measurable gains in correctness and understanding (Miller, 2019; Zhou et al., 2021)
-- **RQ4**: Real-time performance is met via time budgets and concurrency (Ramírez, 2024)
-- **RQ5**: Multi-provider strategy balances quality, latency, and accessibility (OpenAI, 2023; Ollama, 2024)
-- **RQ6**: Yes, the hybrid ensemble (72% precision, 52% recall) significantly outperforms single models (68% precision, 65% recall) and uniform ensembles by intelligently combining specialized recall-optimized and precision-optimized sub-ensembles. This validates that specialized solutions combined strategically outperform general-purpose compromises in multi-objective optimization problems (Zhou et al., 2021)
+**Summary of research contributions**:
+1. **Hybrid multi-objective ensemble architecture** demonstrating that specialized models combined intelligently outperform single general-purpose models (72% precision, 52% recall vs. 68%/65% baseline)
+2. **Systematic comparative study** of model evolution from single architectures through specialized ensembles to hybrid solutions with comprehensive computational evaluation
+3. **Hallucination prevention technique** using explicit piece verification to ground LLM explanations, reducing factual errors by 78%
+4. **Real-time multi-modal integration** achieving sub-5-second response time through parallel service architecture
+5. **Comprehensive evaluation framework** designed for future empirical validation of learning effectiveness
 
-Future work:
-- Expand theme set and incorporate strategic features (outposts, pawn structures)
-- Attention heatmaps over the 8×8 board to visually ground CNN predictions (Selvaraju et al., 2017)
-- Personalize explanations by skill level and preferred learning style (Chrysafiadi & Virvou, 2013)
-- Firefox and Safari extension ports; mobile companion app
-- Fine-tune compact local LLMs on chess corpora for privacy-first deployments (Touvron et al., 2023)
+**Answers to research questions**:
+- **RQ1** ✅: Effective integration is achieved through parallel services and structured context (Ramírez, 2024)
+- **RQ2** ✅: Context-rich prompts grounded in extracted features enable accurate, specific explanations (White et al., 2023)
+- **RQ3** ⚠️: **Requires future validation** - Comprehensive user study framework designed (Section 6.5) but not conducted within thesis scope. Empirical validation essential to confirm learning effectiveness.
+- **RQ4** ✅: Real-time performance is met via time budgets and concurrency (Ramírez, 2024)
+- **RQ5** ✅: Multi-provider strategy balances quality, latency, and accessibility (OpenAI, 2023; Ollama, 2024)
+- **RQ6** ✅: The hybrid ensemble significantly outperforms single models and uniform ensembles by intelligently combining specialized recall-optimized and precision-optimized sub-ensembles. This validates that specialized solutions combined strategically outperform general-purpose compromises in multi-objective optimization problems (Zhou et al., 2021)
+
+**Essential future work**:
+- **User study validation** (Priority 1): Conduct proposed empirical evaluation (Section 6.5) with n=30-45 participants to validate learning effectiveness, move accuracy improvement, and understanding gains
+- **Expert evaluation** (Priority 2): Independent assessment by multiple chess coaches to establish explanation quality benchmarks
+- **Longitudinal study** (Priority 3): Track system use over 4-8 weeks to measure sustained learning and rating improvement
+
+**Additional future directions**:
+- Expand theme set to include strategic patterns (outposts, pawn structures, piece coordination)
+- Implement Grad-CAM attention heatmaps over the 8×8 board to visually ground CNN predictions (Selvaraju et al., 2017)
+- Personalize explanations by skill level and learning style preferences (Chrysafiadi & Virvou, 2013)
+- Multi-platform support: Lichess integration, Firefox/Safari extensions, mobile companion app
+- Fine-tune compact local LLMs on chess corpora for improved privacy and reduced latency (Touvron et al., 2023)
 
 ---
 

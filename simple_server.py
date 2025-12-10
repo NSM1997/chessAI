@@ -50,7 +50,7 @@ async def startup_event():
         print(f"[ERROR] Failed to initialize chess engine: {e}")
         chess_engine_service = None
     
-    # Initialize tactical ML classifier (Phase 2)
+    # Initialize tactical ML classifier
     try:
         from app.services.tactical_analysis import TacticalAnalysisService
         
@@ -64,7 +64,7 @@ async def startup_event():
         print(f"[ERROR] Failed to initialize tactical classifier: {e}")
         tactical_analysis_service = None
     
-    # Initialize Board Analyzer (Phase 3: Path B)
+    # Initialize Board Analyzer
     try:
         from app.services.board_analyzer import BoardAnalyzer
         
@@ -84,7 +84,7 @@ async def startup_event():
         print(f"[ERROR] Failed to initialize move comparator: {e}")
         move_comparator = None
     
-    # Initialize LLM Explanation Service (Phase 3: Path B)
+    # Initialize LLM Explanation Service
     # Smart provider selection: OpenAI → Ollama → Fallback
     try:
         from app.services.llm_explanation import LLMExplanationService
@@ -184,9 +184,6 @@ def detect_opening(fen: str, pv_moves: list) -> dict:
         moves = []
         temp_board = chess.Board()
         
-        # Try to reconstruct game from starting position
-        # This is a simplified approach - for full opening detection,
-        # you'd need an opening book database
         
         # Common opening patterns based on piece positions and moves
         pieces_str = fen.split()[0]
@@ -348,7 +345,6 @@ async def analyze_position(request: dict):
                 position_type = "endgame"
             elif move_number > 25:
                 position_type = "middlegame"
-            # Don't force opening for early moves - let piece analysis decide
                     
         except Exception:
             # Fallback to move number analysis
@@ -380,7 +376,7 @@ async def analyze_position(request: dict):
             except Exception as e:
                 stockfish_analysis = None
         
-        # Use ML Tactical Classifier for enhanced tactical detection (Phase 2)
+        # Use ML Tactical Classifier for enhanced tactical detection
         ml_tactical_themes = []
         if tactical_analysis_service and tactical_analysis_service.is_available:
             try:
@@ -410,7 +406,7 @@ async def analyze_position(request: dict):
             san_move = best_move_info['san']
             score_value = best_move_info['score']['value']
             
-            # Generate intelligent explanation using Board Analyzer + LLM (Phase 3: Path B)
+            # Generate intelligent explanation using Board Analyzer + LLM
             try:
                 if board_analyzer and llm_explanation_service:
                     # Step 1: Analyze board position

@@ -356,16 +356,6 @@ def main():
         json.dump(results, f, indent=2)
     print(f"\n✓ Detailed results saved to: {output_file}")
     
-    # Also save a text summary
-    summary_file = project_root / "scripts" / "detection_rate_summary.txt"
-    import io
-    from contextlib import redirect_stdout
-    f = io.StringIO()
-    with redirect_stdout(f):
-        print_results(results)
-    with open(summary_file, 'w') as out:
-        out.write(f.getvalue())
-    print(f"✓ Summary saved to: {summary_file}")
 
 if __name__ == "__main__":
     try:

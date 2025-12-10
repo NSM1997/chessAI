@@ -254,9 +254,10 @@ class ChessDataset:
         # Encode themes
         theme_label = self.theme_encoder.encode_themes(puzzle['themes'], multi_label=True)
         
-        # Metadata
+        # Metadata (handle both puzzle_id and puzzleId)
+        puzzle_id = puzzle.get('puzzle_id') or puzzle.get('puzzleId', 'unknown')
         metadata = {
-            'puzzle_id': puzzle['puzzle_id'],
+            'puzzle_id': puzzle_id,
             'rating': puzzle.get('rating', 1500),
             'themes': puzzle['themes'],
             'fen': puzzle['fen']
@@ -297,6 +298,11 @@ class ChessDataset:
         """
         Split dataset into train/val/test sets
         
+        DEPRECATED: Use load_presplit_datasets() instead to avoid data leakage!
+        
+        This method has been fixed to deduplicate by FEN, but using pre-split
+        files is still recommended for reproducibility.
+        
         Args:
             train_ratio: Fraction for training
             val_ratio: Fraction for validation
@@ -307,15 +313,28 @@ class ChessDataset:
         """
         assert abs(train_ratio + val_ratio + test_ratio - 1.0) < 1e-6, "Ratios must sum to 1.0"
         
-        n = len(self.puzzles)
+        print("[WARNING] Using split_train_val_test() can cause data leakage!")
+        print("          Recommend using load_presplit_datasets() instead.")
+        
+        # FIXED: Deduplicate by FEN first to prevent leakage
+        unique_puzzles = {}
+        for puzzle in self.puzzles:
+            fen = puzzle.get('fen', '')
+            if fen and fen not in unique_puzzles:
+                unique_puzzles[fen] = puzzle
+        
+        puzzles_list = list(unique_puzzles.values())
+        print(f"[INFO] Deduplicated: {len(self.puzzles)} -> {len(puzzles_list)} unique positions")
+        
+        n = len(puzzles_list)
         indices = np.random.permutation(n)
         
         train_end = int(n * train_ratio)
         val_end = train_end + int(n * val_ratio)
         
-        train_puzzles = [self.puzzles[i] for i in indices[:train_end]]
-        val_puzzles = [self.puzzles[i] for i in indices[train_end:val_end]]
-        test_puzzles = [self.puzzles[i] for i in indices[val_end:]]
+        train_puzzles = [puzzles_list[i] for i in indices[:train_end]]
+        val_puzzles = [puzzles_list[i] for i in indices[train_end:val_end]]
+        test_puzzles = [puzzles_list[i] for i in indices[val_end:]]
         
         # Create new datasets
         train_dataset = ChessDataset.__new__(ChessDataset)
@@ -337,6 +356,62 @@ class ChessDataset:
         test_dataset.data_path = self.data_path
         
         print(f"Split dataset: {len(train_puzzles)} train, {len(val_puzzles)} val, {len(test_puzzles)} test")
+        
+        return train_dataset, val_dataset, test_dataset
+    
+    @staticmethod
+    def load_presplit_datasets(
+        train_path: str = "backend/data/processed/train_puzzles.json",
+        val_path: str = "backend/data/processed/val_puzzles.json",
+        test_path: str = "backend/data/processed/test_puzzles.json"
+    ) -> Tuple['ChessDataset', 'ChessDataset', 'ChessDataset']:
+        """
+        Load pre-split train/val/test datasets (RECOMMENDED)
+        
+        This avoids data leakage by using pre-split files with no overlap.
+        
+        Args:
+            train_path: Path to training puzzles JSON
+            val_path: Path to validation puzzles JSON
+            test_path: Path to test puzzles JSON
+            
+        Returns:
+            train_dataset, val_dataset, test_dataset
+        """
+        print("\n" + "=" * 60)
+        print("LOADING PRE-SPLIT DATASETS (No Data Leakage)")
+        print("=" * 60)
+        
+        board_encoder = ChessBoardEncoder()
+        theme_encoder = TacticalThemeEncoder()
+        
+        train_dataset = ChessDataset(train_path, board_encoder, theme_encoder)
+        val_dataset = ChessDataset(val_path, board_encoder, theme_encoder)
+        test_dataset = ChessDataset(test_path, board_encoder, theme_encoder)
+        
+        print(f"\n[OK] Loaded datasets:")
+        print(f"  Train: {len(train_dataset)} puzzles")
+        print(f"  Val:   {len(val_dataset)} puzzles")
+        print(f"  Test:  {len(test_dataset)} puzzles")
+        
+        # Verify no overlap
+        train_fens = set(p.get('fen', '') for p in train_dataset.puzzles)
+        val_fens = set(p.get('fen', '') for p in val_dataset.puzzles)
+        test_fens = set(p.get('fen', '') for p in test_dataset.puzzles)
+        
+        train_val_overlap = len(train_fens & val_fens)
+        train_test_overlap = len(train_fens & test_fens)
+        val_test_overlap = len(val_fens & test_fens)
+        
+        if train_val_overlap > 0 or train_test_overlap > 0 or val_test_overlap > 0:
+            print(f"\n[WARNING] Overlap detected:")
+            print(f"  Train/Val: {train_val_overlap}")
+            print(f"  Train/Test: {train_test_overlap}")
+            print(f"  Val/Test: {val_test_overlap}")
+        else:
+            print(f"\n[OK] No overlap between splits - clean separation!")
+        
+        print("=" * 60 + "\n")
         
         return train_dataset, val_dataset, test_dataset
 

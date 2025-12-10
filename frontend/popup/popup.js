@@ -170,7 +170,18 @@ class ChessAIPopup {
             }
             message += `\n`;
             
-            // Add Tactical Motifs from explanation
+            // Add Tactical Themes from Hybrid Ensemble (NEW!)
+            if (analysis.tactical_themes && analysis.tactical_themes.length > 0) {
+                message += `🎯 Tactical Themes (Hybrid Ensemble):\n`;
+                analysis.tactical_themes.forEach(theme => {
+                    const source = theme.source === 'recall' ? '📚' : '🎖️';
+                    const confidence = (theme.confidence * 100).toFixed(0);
+                    message += `  ${source} ${theme.theme} (${confidence}% ${theme.source})\n`;
+                });
+                message += `\n`;
+            }
+            
+            // Add Tactical Motifs from explanation (Legacy)
             if (explanation.tactical_motifs && explanation.tactical_motifs.length > 0) {
                 message += `Tactical Motifs:\n`;
                 explanation.tactical_motifs.forEach(motif => {
@@ -431,7 +442,18 @@ class ChessAIPopup {
             }
             message += `\n`;
             
-            // Add Tactical Motifs from explanation
+            // Add Tactical Themes from Hybrid Ensemble (NEW!)
+            if (analysis.tactical_themes && analysis.tactical_themes.length > 0) {
+                message += `🎯 Tactical Themes (Hybrid Ensemble):\n`;
+                analysis.tactical_themes.forEach(theme => {
+                    const source = theme.source === 'recall' ? '📚' : '🎖️';
+                    const confidence = (theme.confidence * 100).toFixed(0);
+                    message += `  ${source} ${theme.theme} (${confidence}% ${theme.source})\n`;
+                });
+                message += `\n`;
+            }
+            
+            // Add Tactical Motifs from explanation (Legacy)
             if (explanation.tactical_motifs && explanation.tactical_motifs.length > 0) {
                 message += `Tactical Motifs:\n`;
                 explanation.tactical_motifs.forEach(motif => {

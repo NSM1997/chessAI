@@ -1,0 +1,2621 @@
+{
+  "stats": {
+    "common": {
+      "detected": 69,
+      "total": 72,
+      "false_positives": 535,
+      "total_predictions": 604
+    },
+    "critical": {
+      "detected": 29,
+      "total": 46,
+      "false_positives": 37,
+      "total_predictions": 66
+    },
+    "overall": {
+      "detected": 98,
+      "total": 118,
+      "false_positives": 572,
+      "total_predictions": 670
+    }
+  },
+  "position_results": [
+    {
+      "position": 1,
+      "fen": "r2r4/p3ppkp/1qpp2p1/8/4PPn1/1PN4P/P1PQ2P1/3R1R1K b - - 0 18",
+      "ground_truth": [
+        "clearance",
+        "sacrifice"
+      ],
+      "predicted": [
+        "pin",
+        "sacrifice",
+        "fork",
+        "clearance",
+        "discoveredAttack",
+        "trappedPiece",
+        "hangingPiece",
+        "attraction",
+        "deflection",
+        "skewer"
+      ],
+      "common_detected": [
+        "clearance",
+        "sacrifice"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "skewer",
+        "trappedPiece",
+        "fork",
+        "discoveredAttack",
+        "hangingPiece",
+        "deflection",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": []
+    },
+    {
+      "position": 2,
+      "fen": "4b3/7p/1N1Bp3/3pP1R1/4k3/8/3QpqPP/4R2K w - - 2 40",
+      "ground_truth": [
+        "mate",
+        "mateIn2",
+        "promotion"
+      ],
+      "predicted": [
+        "mate",
+        "fork",
+        "pin",
+        "sacrifice",
+        "mateIn2",
+        "hangingPiece",
+        "discoveredAttack",
+        "mateIn1",
+        "deflection",
+        "attraction"
+      ],
+      "common_detected": [],
+      "common_missed": [
+        "promotion"
+      ],
+      "common_fp": [
+        "pin",
+        "fork",
+        "discoveredAttack",
+        "hangingPiece",
+        "deflection",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [
+        "mate",
+        "mateIn2"
+      ],
+      "critical_missed": [],
+      "critical_fp": [
+        "mateIn1"
+      ]
+    },
+    {
+      "position": 3,
+      "fen": "5rk1/1Q4pp/p1p2B2/3p4/8/1P5P/P1q3P1/4R2K b - - 0 32",
+      "ground_truth": [
+        "clearance"
+      ],
+      "predicted": [
+        "mate",
+        "fork",
+        "deflection",
+        "pin",
+        "sacrifice",
+        "mateIn2",
+        "hangingPiece",
+        "discoveredAttack",
+        "attraction",
+        "clearance"
+      ],
+      "common_detected": [
+        "clearance"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "fork",
+        "discoveredAttack",
+        "hangingPiece",
+        "deflection",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": [
+        "mate",
+        "mateIn2"
+      ]
+    },
+    {
+      "position": 4,
+      "fen": "8/4qp1k/p2p2b1/1p2r3/4PQ1r/1P2R1RP/P4PBK/8 w - - 3 36",
+      "ground_truth": [
+        "trappedPiece"
+      ],
+      "predicted": [
+        "pin",
+        "fork",
+        "deflection",
+        "attraction",
+        "sacrifice",
+        "discoveredAttack",
+        "skewer",
+        "clearance",
+        "trappedPiece",
+        "hangingPiece"
+      ],
+      "common_detected": [
+        "trappedPiece"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "skewer",
+        "fork",
+        "discoveredAttack",
+        "clearance",
+        "deflection",
+        "hangingPiece",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": []
+    },
+    {
+      "position": 5,
+      "fen": "r4k1r/1pp1qppp/p2b4/3Pp3/2B1Q3/4B3/PPP3PP/5RK1 b - - 3 17",
+      "ground_truth": [
+        "deflection"
+      ],
+      "predicted": [
+        "pin",
+        "fork",
+        "sacrifice",
+        "deflection",
+        "discoveredAttack",
+        "attraction",
+        "hangingPiece",
+        "skewer",
+        "clearance",
+        "trappedPiece"
+      ],
+      "common_detected": [
+        "deflection"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "skewer",
+        "trappedPiece",
+        "fork",
+        "discoveredAttack",
+        "clearance",
+        "hangingPiece",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": []
+    },
+    {
+      "position": 6,
+      "fen": "7k/3b2pP/5pP1/3p1P2/p1pP4/q3P1Q1/2P1B3/2K5 w - - 3 37",
+      "ground_truth": [
+        "mate"
+      ],
+      "predicted": [
+        "clearance",
+        "sacrifice",
+        "mate",
+        "hangingPiece",
+        "fork",
+        "pin",
+        "discoveredAttack",
+        "mateIn2",
+        "deflection",
+        "promotion"
+      ],
+      "common_detected": [],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "promotion",
+        "fork",
+        "clearance",
+        "discoveredAttack",
+        "hangingPiece",
+        "deflection",
+        "sacrifice"
+      ],
+      "critical_detected": [
+        "mate"
+      ],
+      "critical_missed": [],
+      "critical_fp": [
+        "mateIn2"
+      ]
+    },
+    {
+      "position": 7,
+      "fen": "8/2kn2p1/7p/2p2P2/2Q5/2PP4/4r2P/1b4K1 b - - 0 40",
+      "ground_truth": [
+        "fork"
+      ],
+      "predicted": [
+        "fork",
+        "skewer",
+        "deflection",
+        "pin",
+        "discoveredAttack",
+        "sacrifice",
+        "attraction",
+        "hangingPiece",
+        "clearance",
+        "trappedPiece"
+      ],
+      "common_detected": [
+        "fork"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "skewer",
+        "trappedPiece",
+        "discoveredAttack",
+        "clearance",
+        "deflection",
+        "hangingPiece",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": []
+    },
+    {
+      "position": 8,
+      "fen": "Qrk4r/p1p5/3b2p1/4p1q1/8/2N3P1/PPPP1P2/R1B2RK1 w - - 3 24",
+      "ground_truth": [
+        "deflection",
+        "skewer"
+      ],
+      "predicted": [
+        "sacrifice",
+        "attraction",
+        "mate",
+        "pin",
+        "fork",
+        "deflection",
+        "clearance",
+        "discoveredAttack",
+        "hangingPiece",
+        "skewer"
+      ],
+      "common_detected": [
+        "skewer",
+        "deflection"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "fork",
+        "discoveredAttack",
+        "clearance",
+        "hangingPiece",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": [
+        "mate"
+      ]
+    },
+    {
+      "position": 9,
+      "fen": "1rr3k1/pp2qpp1/2n1p3/2PpPnN1/3P2P1/P2QB3/5P2/1RR3K1 b - - 0 22",
+      "ground_truth": [
+        "mate",
+        "mateIn2"
+      ],
+      "predicted": [
+        "fork",
+        "pin",
+        "sacrifice",
+        "discoveredAttack",
+        "hangingPiece",
+        "mate",
+        "attraction",
+        "deflection",
+        "clearance",
+        "trappedPiece"
+      ],
+      "common_detected": [],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "trappedPiece",
+        "fork",
+        "discoveredAttack",
+        "clearance",
+        "hangingPiece",
+        "deflection",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [
+        "mate"
+      ],
+      "critical_missed": [
+        "mateIn2"
+      ],
+      "critical_fp": []
+    },
+    {
+      "position": 10,
+      "fen": "5rk1/5ppp/pq2p3/1p6/4PQ2/P7/1n4PP/2R2R1K b - - 1 29",
+      "ground_truth": [
+        "fork",
+        "mate",
+        "sacrifice"
+      ],
+      "predicted": [
+        "fork",
+        "sacrifice",
+        "pin",
+        "discoveredAttack",
+        "mate",
+        "hangingPiece",
+        "deflection",
+        "attraction",
+        "skewer",
+        "clearance"
+      ],
+      "common_detected": [
+        "sacrifice",
+        "fork"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "skewer",
+        "discoveredAttack",
+        "clearance",
+        "hangingPiece",
+        "deflection",
+        "attraction"
+      ],
+      "critical_detected": [
+        "mate"
+      ],
+      "critical_missed": [],
+      "critical_fp": []
+    },
+    {
+      "position": 11,
+      "fen": "8/1pR4p/4k1b1/P2p2p1/3P1p2/2K2P1P/R5P1/1r6 w - - 6 36",
+      "ground_truth": [
+        "skewer"
+      ],
+      "predicted": [
+        "fork",
+        "skewer",
+        "deflection",
+        "mate",
+        "pin",
+        "hangingPiece",
+        "discoveredAttack",
+        "sacrifice",
+        "promotion",
+        "attraction"
+      ],
+      "common_detected": [
+        "skewer"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "promotion",
+        "fork",
+        "discoveredAttack",
+        "hangingPiece",
+        "deflection",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": [
+        "mate"
+      ]
+    },
+    {
+      "position": 12,
+      "fen": "r3k2r/p1bN2pp/2p1pp2/3p3b/3P1q2/2N4P/PPPQ1PP1/R3R1K1 w kq - 0 16",
+      "ground_truth": [
+        "hangingPiece"
+      ],
+      "predicted": [
+        "mate",
+        "pin",
+        "fork",
+        "sacrifice",
+        "discoveredAttack",
+        "mateIn1",
+        "attraction",
+        "deflection",
+        "clearance",
+        "hangingPiece"
+      ],
+      "common_detected": [
+        "hangingPiece"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "fork",
+        "discoveredAttack",
+        "clearance",
+        "deflection",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": [
+        "mate",
+        "mateIn1"
+      ]
+    },
+    {
+      "position": 13,
+      "fen": "8/5p2/1K4pp/P2k4/3n4/4p1P1/8/2N5 b - - 0 51",
+      "ground_truth": [
+        "sacrifice"
+      ],
+      "predicted": [
+        "promotion",
+        "hangingPiece",
+        "fork",
+        "sacrifice",
+        "deflection",
+        "clearance",
+        "trappedPiece",
+        "pin",
+        "discoveredAttack",
+        "skewer"
+      ],
+      "common_detected": [
+        "sacrifice"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "promotion",
+        "skewer",
+        "trappedPiece",
+        "fork",
+        "clearance",
+        "discoveredAttack",
+        "hangingPiece",
+        "deflection"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": []
+    },
+    {
+      "position": 14,
+      "fen": "8/1p3pkp/p5p1/q2pQ3/3P4/1P6/P1r2PPP/4R1K1 b - - 4 26",
+      "ground_truth": [
+        "clearance"
+      ],
+      "predicted": [
+        "mate",
+        "mateIn2",
+        "fork",
+        "hangingPiece",
+        "backRankMate",
+        "pin",
+        "deflection",
+        "sacrifice",
+        "discoveredAttack",
+        "promotion"
+      ],
+      "common_detected": [],
+      "common_missed": [
+        "clearance"
+      ],
+      "common_fp": [
+        "sacrifice",
+        "pin",
+        "fork",
+        "discoveredAttack",
+        "hangingPiece",
+        "deflection",
+        "promotion"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": [
+        "mate",
+        "mateIn2",
+        "backRankMate"
+      ]
+    },
+    {
+      "position": 15,
+      "fen": "2Q5/b4kp1/p2p1p2/1p6/1P6/P5P1/q6P/B4R1K w - - 2 40",
+      "ground_truth": [
+        "mate",
+        "mateIn2"
+      ],
+      "predicted": [
+        "fork",
+        "pin",
+        "mate",
+        "discoveredAttack",
+        "hangingPiece",
+        "sacrifice",
+        "deflection",
+        "skewer",
+        "attraction",
+        "clearance"
+      ],
+      "common_detected": [],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "skewer",
+        "fork",
+        "discoveredAttack",
+        "clearance",
+        "hangingPiece",
+        "deflection",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [
+        "mate"
+      ],
+      "critical_missed": [
+        "mateIn2"
+      ],
+      "critical_fp": []
+    },
+    {
+      "position": 16,
+      "fen": "r6k/ppp2rpp/3p4/7P/1nBPb1Q1/8/PPq3P1/K4R1R w - - 0 28",
+      "ground_truth": [
+        "mate",
+        "mateIn2",
+        "sacrifice"
+      ],
+      "predicted": [
+        "mate",
+        "sacrifice",
+        "fork",
+        "attraction",
+        "pin",
+        "deflection",
+        "mateIn2",
+        "hangingPiece",
+        "clearance",
+        "discoveredAttack"
+      ],
+      "common_detected": [
+        "sacrifice"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "fork",
+        "clearance",
+        "discoveredAttack",
+        "deflection",
+        "hangingPiece",
+        "attraction"
+      ],
+      "critical_detected": [
+        "mate",
+        "mateIn2"
+      ],
+      "critical_missed": [],
+      "critical_fp": []
+    },
+    {
+      "position": 17,
+      "fen": "8/8/7p/2p3RK/1pk3P1/8/7P/8 w - - 0 49",
+      "ground_truth": [
+        "promotion"
+      ],
+      "predicted": [
+        "hangingPiece",
+        "promotion",
+        "fork",
+        "deflection",
+        "sacrifice",
+        "skewer",
+        "clearance",
+        "trappedPiece",
+        "pin",
+        "discoveredAttack"
+      ],
+      "common_detected": [
+        "promotion"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "skewer",
+        "trappedPiece",
+        "fork",
+        "clearance",
+        "discoveredAttack",
+        "hangingPiece",
+        "deflection",
+        "sacrifice"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": []
+    },
+    {
+      "position": 18,
+      "fen": "rn2r1k1/pp2qppp/5n2/2bp4/8/1B2BP2/PPPQNP1P/R3K2R w KQ - 0 14",
+      "ground_truth": [
+        "attraction",
+        "pin"
+      ],
+      "predicted": [
+        "sacrifice",
+        "fork",
+        "pin",
+        "discoveredAttack",
+        "hangingPiece",
+        "deflection",
+        "attraction",
+        "clearance",
+        "skewer",
+        "trappedPiece"
+      ],
+      "common_detected": [
+        "pin",
+        "attraction"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "skewer",
+        "trappedPiece",
+        "fork",
+        "discoveredAttack",
+        "clearance",
+        "hangingPiece",
+        "deflection",
+        "sacrifice"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": []
+    },
+    {
+      "position": 19,
+      "fen": "7k/1pq3pp/p7/2P5/3Qp3/P5P1/5PP1/6K1 b - - 0 30",
+      "ground_truth": [
+        "backRankMate",
+        "mate",
+        "mateIn2"
+      ],
+      "predicted": [
+        "mate",
+        "backRankMate",
+        "mateIn2",
+        "fork",
+        "hangingPiece",
+        "deflection",
+        "sacrifice",
+        "pin",
+        "discoveredAttack",
+        "skewer"
+      ],
+      "common_detected": [],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "discoveredAttack",
+        "hangingPiece",
+        "deflection",
+        "skewer",
+        "sacrifice",
+        "fork"
+      ],
+      "critical_detected": [
+        "mate",
+        "mateIn2",
+        "backRankMate"
+      ],
+      "critical_missed": [],
+      "critical_fp": []
+    },
+    {
+      "position": 20,
+      "fen": "8/4n3/8/4kp2/K3p3/P3R1P1/8/8 w - - 2 54",
+      "ground_truth": [
+        "fork"
+      ],
+      "predicted": [
+        "hangingPiece",
+        "fork",
+        "promotion",
+        "sacrifice",
+        "deflection",
+        "trappedPiece",
+        "clearance",
+        "discoveredAttack",
+        "pin",
+        "skewer"
+      ],
+      "common_detected": [
+        "fork"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "promotion",
+        "skewer",
+        "trappedPiece",
+        "clearance",
+        "discoveredAttack",
+        "hangingPiece",
+        "deflection",
+        "sacrifice"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": []
+    },
+    {
+      "position": 21,
+      "fen": "r1bb1rk1/5ppp/3p2q1/2pP2P1/ppP1PP1P/6Q1/PP1N4/1K1R3R b - - 0 24",
+      "ground_truth": [
+        "trappedPiece"
+      ],
+      "predicted": [
+        "sacrifice",
+        "fork",
+        "trappedPiece",
+        "discoveredAttack",
+        "mate",
+        "pin",
+        "hangingPiece",
+        "clearance",
+        "skewer",
+        "attraction"
+      ],
+      "common_detected": [
+        "trappedPiece"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "skewer",
+        "fork",
+        "discoveredAttack",
+        "clearance",
+        "hangingPiece",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": [
+        "mate"
+      ]
+    },
+    {
+      "position": 22,
+      "fen": "6k1/p4ppp/1p2pn2/8/2N5/1PK2bP1/P3BPqP/3R4 b - - 0 27",
+      "ground_truth": [
+        "backRankMate",
+        "mate",
+        "mateIn2"
+      ],
+      "predicted": [
+        "mate",
+        "fork",
+        "hangingPiece",
+        "pin",
+        "deflection",
+        "sacrifice",
+        "discoveredAttack",
+        "attraction",
+        "clearance",
+        "skewer"
+      ],
+      "common_detected": [],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "skewer",
+        "fork",
+        "discoveredAttack",
+        "clearance",
+        "hangingPiece",
+        "deflection",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [
+        "mate"
+      ],
+      "critical_missed": [
+        "mateIn2",
+        "backRankMate"
+      ],
+      "critical_fp": []
+    },
+    {
+      "position": 23,
+      "fen": "r2q4/k1p1r1pp/1p6/BQpP4/P7/8/5PPP/1R4K1 b - - 1 29",
+      "ground_truth": [
+        "discoveredAttack"
+      ],
+      "predicted": [
+        "deflection",
+        "fork",
+        "mate",
+        "sacrifice",
+        "discoveredAttack",
+        "pin",
+        "hangingPiece",
+        "attraction",
+        "clearance",
+        "trappedPiece"
+      ],
+      "common_detected": [
+        "discoveredAttack"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "trappedPiece",
+        "fork",
+        "clearance",
+        "deflection",
+        "hangingPiece",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": [
+        "mate"
+      ]
+    },
+    {
+      "position": 24,
+      "fen": "3r1rk1/ppp2ppn/3qb2p/8/2P5/1Pb4P/PBQ2PP1/3RR1K1 w - - 0 19",
+      "ground_truth": [
+        "hangingPiece"
+      ],
+      "predicted": [
+        "discoveredAttack",
+        "fork",
+        "pin",
+        "hangingPiece",
+        "sacrifice",
+        "trappedPiece",
+        "clearance",
+        "mate",
+        "attraction",
+        "deflection"
+      ],
+      "common_detected": [
+        "hangingPiece"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "trappedPiece",
+        "fork",
+        "discoveredAttack",
+        "clearance",
+        "deflection",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": [
+        "mate"
+      ]
+    },
+    {
+      "position": 25,
+      "fen": "5rk1/pp3p2/2p3Bp/8/3P1B2/2P1n2q/PPQ5/5RK1 w - - 1 30",
+      "ground_truth": [
+        "hangingPiece",
+        "pin"
+      ],
+      "predicted": [
+        "sacrifice",
+        "mate",
+        "promotion",
+        "hangingPiece",
+        "fork",
+        "pin",
+        "deflection",
+        "mateIn1",
+        "attraction",
+        "discoveredAttack"
+      ],
+      "common_detected": [
+        "pin",
+        "hangingPiece"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "sacrifice",
+        "fork",
+        "discoveredAttack",
+        "deflection",
+        "promotion",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": [
+        "mate",
+        "mateIn1"
+      ]
+    },
+    {
+      "position": 26,
+      "fen": "1k5r/pp1nbrp1/1q2p3/4PbPp/2pP3P/2P1Q3/P2N3K/R1B1NR2 b - - 1 23",
+      "ground_truth": [
+        "pin"
+      ],
+      "predicted": [
+        "discoveredAttack",
+        "pin",
+        "sacrifice",
+        "deflection",
+        "fork",
+        "attraction",
+        "hangingPiece",
+        "clearance",
+        "trappedPiece",
+        "promotion"
+      ],
+      "common_detected": [
+        "pin"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "promotion",
+        "trappedPiece",
+        "fork",
+        "discoveredAttack",
+        "clearance",
+        "deflection",
+        "hangingPiece",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": []
+    },
+    {
+      "position": 27,
+      "fen": "6k1/1p3ppp/p1n5/3r1q2/PPBb4/3P4/2P4B/1R1Q3K w - - 0 22",
+      "ground_truth": [
+        "mate",
+        "mateIn2"
+      ],
+      "predicted": [
+        "mate",
+        "pin",
+        "fork",
+        "hangingPiece",
+        "mateIn2",
+        "sacrifice",
+        "deflection",
+        "discoveredAttack",
+        "attraction",
+        "clearance"
+      ],
+      "common_detected": [],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "fork",
+        "discoveredAttack",
+        "clearance",
+        "hangingPiece",
+        "deflection",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [
+        "mate",
+        "mateIn2"
+      ],
+      "critical_missed": [],
+      "critical_fp": []
+    },
+    {
+      "position": 28,
+      "fen": "r2q1rk1/1p1bbppp/p3pB2/8/1P6/P3PN2/2Q1BPP1/2R1K2R b K - 0 18",
+      "ground_truth": [
+        "mate",
+        "mateIn1"
+      ],
+      "predicted": [
+        "fork",
+        "pin",
+        "discoveredAttack",
+        "sacrifice",
+        "hangingPiece",
+        "clearance",
+        "attraction",
+        "trappedPiece",
+        "deflection",
+        "skewer"
+      ],
+      "common_detected": [],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "skewer",
+        "trappedPiece",
+        "fork",
+        "discoveredAttack",
+        "clearance",
+        "hangingPiece",
+        "deflection",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [
+        "mate",
+        "mateIn1"
+      ],
+      "critical_fp": []
+    },
+    {
+      "position": 29,
+      "fen": "4r1k1/R7/5Q2/1P4p1/7p/3pP1K1/3Pb1P1/7r w - - 0 44",
+      "ground_truth": [
+        "mate",
+        "mateIn1"
+      ],
+      "predicted": [
+        "mate",
+        "fork",
+        "deflection",
+        "mateIn2",
+        "pin",
+        "skewer",
+        "discoveredAttack",
+        "hangingPiece",
+        "sacrifice",
+        "attraction"
+      ],
+      "common_detected": [],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "skewer",
+        "fork",
+        "discoveredAttack",
+        "deflection",
+        "hangingPiece",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [
+        "mate"
+      ],
+      "critical_missed": [
+        "mateIn1"
+      ],
+      "critical_fp": [
+        "mateIn2"
+      ]
+    },
+    {
+      "position": 30,
+      "fen": "8/5r2/1p1kpP2/n2p2P1/3P4/1PN1r3/P7/2R3K1 b - - 1 30",
+      "ground_truth": [
+        "skewer"
+      ],
+      "predicted": [
+        "fork",
+        "sacrifice",
+        "discoveredAttack",
+        "pin",
+        "hangingPiece",
+        "deflection",
+        "trappedPiece",
+        "clearance",
+        "attraction",
+        "skewer"
+      ],
+      "common_detected": [
+        "skewer"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "trappedPiece",
+        "fork",
+        "discoveredAttack",
+        "clearance",
+        "hangingPiece",
+        "deflection",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": []
+    },
+    {
+      "position": 31,
+      "fen": "4r1k1/p3Nppp/1n2p3/3q4/8/P1Q1PP2/6PP/2R3K1 b - - 5 26",
+      "ground_truth": [
+        "backRankMate",
+        "mate",
+        "sacrifice"
+      ],
+      "predicted": [
+        "sacrifice",
+        "mate",
+        "fork",
+        "mateIn2",
+        "hangingPiece",
+        "backRankMate",
+        "deflection",
+        "pin",
+        "attraction",
+        "discoveredAttack"
+      ],
+      "common_detected": [
+        "sacrifice"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "fork",
+        "discoveredAttack",
+        "hangingPiece",
+        "deflection",
+        "attraction"
+      ],
+      "critical_detected": [
+        "mate",
+        "backRankMate"
+      ],
+      "critical_missed": [],
+      "critical_fp": [
+        "mateIn2"
+      ]
+    },
+    {
+      "position": 32,
+      "fen": "7k/5N1p/p3p1PB/2p5/5P2/5R1K/1rq5/3r2Q1 b - - 2 41",
+      "ground_truth": [
+        "mate",
+        "promotion",
+        "sacrifice"
+      ],
+      "predicted": [
+        "mate",
+        "fork",
+        "mateIn2",
+        "pin",
+        "deflection",
+        "sacrifice",
+        "hangingPiece",
+        "mateIn1",
+        "discoveredAttack",
+        "attraction"
+      ],
+      "common_detected": [
+        "sacrifice"
+      ],
+      "common_missed": [
+        "promotion"
+      ],
+      "common_fp": [
+        "pin",
+        "fork",
+        "discoveredAttack",
+        "hangingPiece",
+        "deflection",
+        "attraction"
+      ],
+      "critical_detected": [
+        "mate"
+      ],
+      "critical_missed": [],
+      "critical_fp": [
+        "mateIn2",
+        "mateIn1"
+      ]
+    },
+    {
+      "position": 33,
+      "fen": "3r1rk1/p4pp1/1p2P1p1/3P4/2PQ4/q5PB/7P/4R1K1 b - - 0 32",
+      "ground_truth": [
+        "attraction"
+      ],
+      "predicted": [
+        "fork",
+        "deflection",
+        "pin",
+        "sacrifice",
+        "skewer",
+        "discoveredAttack",
+        "attraction",
+        "hangingPiece",
+        "clearance",
+        "trappedPiece"
+      ],
+      "common_detected": [
+        "attraction"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "skewer",
+        "trappedPiece",
+        "fork",
+        "discoveredAttack",
+        "clearance",
+        "deflection",
+        "hangingPiece",
+        "sacrifice"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": []
+    },
+    {
+      "position": 34,
+      "fen": "3r3k/8/5pQb/1P2p2p/8/4PNB1/P4PPP/2Rq2K1 w - - 1 27",
+      "ground_truth": [
+        "backRankMate",
+        "mate",
+        "mateIn2"
+      ],
+      "predicted": [
+        "mate",
+        "backRankMate",
+        "mateIn2",
+        "sacrifice",
+        "hangingPiece",
+        "fork",
+        "deflection",
+        "promotion",
+        "pin",
+        "attraction"
+      ],
+      "common_detected": [],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "hangingPiece",
+        "deflection",
+        "promotion",
+        "sacrifice",
+        "attraction",
+        "fork"
+      ],
+      "critical_detected": [
+        "mate",
+        "mateIn2",
+        "backRankMate"
+      ],
+      "critical_missed": [],
+      "critical_fp": []
+    },
+    {
+      "position": 35,
+      "fen": "8/p7/bp2k3/4p3/P6B/1pr1K3/3N2PP/R4R2 w - - 2 30",
+      "ground_truth": [
+        "mate",
+        "mateIn1"
+      ],
+      "predicted": [
+        "deflection",
+        "fork",
+        "pin",
+        "discoveredAttack",
+        "sacrifice",
+        "attraction",
+        "skewer",
+        "clearance",
+        "trappedPiece",
+        "hangingPiece"
+      ],
+      "common_detected": [],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "skewer",
+        "trappedPiece",
+        "fork",
+        "discoveredAttack",
+        "clearance",
+        "deflection",
+        "hangingPiece",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [
+        "mate",
+        "mateIn1"
+      ],
+      "critical_fp": []
+    },
+    {
+      "position": 36,
+      "fen": "3r4/3r4/pp1Nk1pp/2p1Pp2/2Pn1K1P/1P4R1/P2R4/8 b - - 1 35",
+      "ground_truth": [
+        "deflection",
+        "skewer"
+      ],
+      "predicted": [
+        "deflection",
+        "fork",
+        "skewer",
+        "discoveredAttack",
+        "pin",
+        "mate",
+        "sacrifice",
+        "trappedPiece",
+        "hangingPiece",
+        "attraction"
+      ],
+      "common_detected": [
+        "skewer",
+        "deflection"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "trappedPiece",
+        "fork",
+        "discoveredAttack",
+        "hangingPiece",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": [
+        "mate"
+      ]
+    },
+    {
+      "position": 37,
+      "fen": "6k1/b7/6p1/5p1p/2R4P/3P1KPN/r4P2/8 w - - 6 48",
+      "ground_truth": [
+        "mate",
+        "mateIn1"
+      ],
+      "predicted": [
+        "fork",
+        "deflection",
+        "pin",
+        "discoveredAttack",
+        "skewer",
+        "sacrifice",
+        "hangingPiece",
+        "attraction",
+        "clearance",
+        "promotion"
+      ],
+      "common_detected": [],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "promotion",
+        "skewer",
+        "fork",
+        "discoveredAttack",
+        "clearance",
+        "deflection",
+        "hangingPiece",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [
+        "mate",
+        "mateIn1"
+      ],
+      "critical_fp": []
+    },
+    {
+      "position": 38,
+      "fen": "r5q1/pp1k4/3bb1n1/1N2n1B1/4P3/3p2Q1/PP4PP/2R4K b - - 5 23",
+      "ground_truth": [
+        "deflection",
+        "sacrifice"
+      ],
+      "predicted": [
+        "fork",
+        "pin",
+        "sacrifice",
+        "discoveredAttack",
+        "deflection",
+        "attraction",
+        "hangingPiece",
+        "clearance",
+        "skewer",
+        "trappedPiece"
+      ],
+      "common_detected": [
+        "deflection",
+        "sacrifice"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "skewer",
+        "trappedPiece",
+        "fork",
+        "discoveredAttack",
+        "clearance",
+        "hangingPiece",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": []
+    },
+    {
+      "position": 39,
+      "fen": "2r2rk1/p2q2pp/1p3p2/3p1p2/1P1QN2N/P5PP/4PPB1/6K1 b - - 0 23",
+      "ground_truth": [
+        "discoveredAttack",
+        "fork"
+      ],
+      "predicted": [
+        "pin",
+        "fork",
+        "sacrifice",
+        "attraction",
+        "deflection",
+        "clearance",
+        "discoveredAttack",
+        "hangingPiece",
+        "skewer",
+        "trappedPiece"
+      ],
+      "common_detected": [
+        "discoveredAttack",
+        "fork"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "skewer",
+        "trappedPiece",
+        "clearance",
+        "deflection",
+        "hangingPiece",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": []
+    },
+    {
+      "position": 40,
+      "fen": "2r2bR1/4kpB1/p3p1p1/1p6/7Q/P1P2q2/1P6/1K6 b - - 5 31",
+      "ground_truth": [
+        "deflection"
+      ],
+      "predicted": [
+        "mate",
+        "fork",
+        "pin",
+        "discoveredAttack",
+        "sacrifice",
+        "hangingPiece",
+        "trappedPiece",
+        "clearance",
+        "attraction",
+        "deflection"
+      ],
+      "common_detected": [
+        "deflection"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "trappedPiece",
+        "fork",
+        "discoveredAttack",
+        "clearance",
+        "hangingPiece",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": [
+        "mate"
+      ]
+    },
+    {
+      "position": 41,
+      "fen": "6k1/1R3p2/1N1b2p1/1P1p1p2/3P2qp/2P3P1/1Q3P1P/6K1 w - - 0 29",
+      "ground_truth": [
+        "attraction",
+        "mate"
+      ],
+      "predicted": [
+        "fork",
+        "pin",
+        "deflection",
+        "sacrifice",
+        "hangingPiece",
+        "mate",
+        "discoveredAttack",
+        "attraction",
+        "clearance",
+        "promotion"
+      ],
+      "common_detected": [
+        "attraction"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "promotion",
+        "fork",
+        "discoveredAttack",
+        "clearance",
+        "hangingPiece",
+        "deflection",
+        "sacrifice"
+      ],
+      "critical_detected": [
+        "mate"
+      ],
+      "critical_missed": [],
+      "critical_fp": []
+    },
+    {
+      "position": 42,
+      "fen": "2r1rk2/4np2/p1pb1qp1/1p3B1R/3P4/PQ3PN1/1P3P1P/4R1K1 w - - 0 25",
+      "ground_truth": [
+        "discoveredAttack"
+      ],
+      "predicted": [
+        "fork",
+        "discoveredAttack",
+        "trappedPiece",
+        "pin",
+        "hangingPiece",
+        "sacrifice",
+        "clearance",
+        "attraction",
+        "deflection",
+        "skewer"
+      ],
+      "common_detected": [
+        "discoveredAttack"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "skewer",
+        "trappedPiece",
+        "fork",
+        "clearance",
+        "hangingPiece",
+        "deflection",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": []
+    },
+    {
+      "position": 43,
+      "fen": "r6k/5p1p/p1Q1pp2/4q3/4nB2/P4R1P/5PPK/R2r4 b - - 6 28",
+      "ground_truth": [
+        "fork",
+        "hangingPiece"
+      ],
+      "predicted": [
+        "pin",
+        "sacrifice",
+        "fork",
+        "attraction",
+        "clearance",
+        "deflection",
+        "hangingPiece",
+        "mate",
+        "discoveredAttack",
+        "promotion"
+      ],
+      "common_detected": [
+        "hangingPiece",
+        "fork"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "sacrifice",
+        "pin",
+        "discoveredAttack",
+        "clearance",
+        "deflection",
+        "promotion",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": [
+        "mate"
+      ]
+    },
+    {
+      "position": 44,
+      "fen": "3b4/pp2kprp/8/1Bp5/4R3/1P6/P4PPP/1K6 b - - 0 22",
+      "ground_truth": [
+        "mate",
+        "mateIn1"
+      ],
+      "predicted": [
+        "fork",
+        "pin",
+        "deflection",
+        "discoveredAttack",
+        "sacrifice",
+        "hangingPiece",
+        "attraction",
+        "skewer",
+        "clearance",
+        "trappedPiece"
+      ],
+      "common_detected": [],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "skewer",
+        "trappedPiece",
+        "fork",
+        "discoveredAttack",
+        "clearance",
+        "deflection",
+        "hangingPiece",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [
+        "mate",
+        "mateIn1"
+      ],
+      "critical_fp": []
+    },
+    {
+      "position": 45,
+      "fen": "4rq1k/ppp2r2/3p2Qp/2b1p2N/4PP2/8/PPP3PP/R4R1K w - - 1 21",
+      "ground_truth": [
+        "mate",
+        "mateIn2"
+      ],
+      "predicted": [
+        "mate",
+        "fork",
+        "sacrifice",
+        "pin",
+        "hangingPiece",
+        "discoveredAttack",
+        "deflection",
+        "attraction",
+        "clearance",
+        "trappedPiece"
+      ],
+      "common_detected": [],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "trappedPiece",
+        "fork",
+        "discoveredAttack",
+        "clearance",
+        "hangingPiece",
+        "deflection",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [
+        "mate"
+      ],
+      "critical_missed": [
+        "mateIn2"
+      ],
+      "critical_fp": []
+    },
+    {
+      "position": 46,
+      "fen": "1k1r4/4QR1p/1b1p2r1/1p2p1B1/4q3/2P5/PP4PP/R6K w - - 1 33",
+      "ground_truth": [
+        "deflection",
+        "discoveredAttack"
+      ],
+      "predicted": [
+        "mate",
+        "fork",
+        "mateIn2",
+        "hangingPiece",
+        "sacrifice",
+        "backRankMate",
+        "deflection",
+        "pin",
+        "discoveredAttack",
+        "attraction"
+      ],
+      "common_detected": [
+        "discoveredAttack",
+        "deflection"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "fork",
+        "hangingPiece",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": [
+        "mate",
+        "mateIn2",
+        "backRankMate"
+      ]
+    },
+    {
+      "position": 47,
+      "fen": "8/5p1K/2k3pP/6P1/8/8/P4p2/8 w - - 0 44",
+      "ground_truth": [
+        "promotion"
+      ],
+      "predicted": [
+        "promotion",
+        "hangingPiece",
+        "fork",
+        "deflection",
+        "sacrifice",
+        "clearance",
+        "pin",
+        "attraction",
+        "skewer",
+        "discoveredAttack"
+      ],
+      "common_detected": [
+        "promotion"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "skewer",
+        "fork",
+        "clearance",
+        "discoveredAttack",
+        "hangingPiece",
+        "deflection",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": []
+    },
+    {
+      "position": 48,
+      "fen": "3r2k1/1R1npp1p/3p2p1/3N4/8/2P5/3PKPPP/8 b - - 6 26",
+      "ground_truth": [
+        "attraction",
+        "fork",
+        "sacrifice"
+      ],
+      "predicted": [
+        "fork",
+        "discoveredAttack",
+        "pin",
+        "hangingPiece",
+        "sacrifice",
+        "deflection",
+        "attraction",
+        "clearance",
+        "trappedPiece",
+        "skewer"
+      ],
+      "common_detected": [
+        "sacrifice",
+        "attraction",
+        "fork"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "skewer",
+        "trappedPiece",
+        "discoveredAttack",
+        "clearance",
+        "hangingPiece",
+        "deflection"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": []
+    },
+    {
+      "position": 49,
+      "fen": "k1r2r2/ppP5/b7/3BQ2p/3R3P/P3P1p1/5qP1/3R3K w - - 0 37",
+      "ground_truth": [
+        "mate",
+        "mateIn2",
+        "sacrifice"
+      ],
+      "predicted": [
+        "mate",
+        "mateIn2",
+        "hangingPiece",
+        "fork",
+        "sacrifice",
+        "deflection",
+        "pin",
+        "attraction",
+        "discoveredAttack",
+        "promotion"
+      ],
+      "common_detected": [
+        "sacrifice"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "promotion",
+        "fork",
+        "discoveredAttack",
+        "hangingPiece",
+        "deflection",
+        "attraction"
+      ],
+      "critical_detected": [
+        "mate",
+        "mateIn2"
+      ],
+      "critical_missed": [],
+      "critical_fp": []
+    },
+    {
+      "position": 50,
+      "fen": "rn2kb1r/pp2pppp/2p5/q1B5/2B5/5R2/P5PP/2RQ2K1 b kq - 5 15",
+      "ground_truth": [
+        "attraction",
+        "sacrifice"
+      ],
+      "predicted": [
+        "pin",
+        "fork",
+        "sacrifice",
+        "attraction",
+        "discoveredAttack",
+        "mate",
+        "deflection",
+        "hangingPiece",
+        "clearance",
+        "skewer"
+      ],
+      "common_detected": [
+        "sacrifice",
+        "attraction"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "skewer",
+        "fork",
+        "discoveredAttack",
+        "clearance",
+        "deflection",
+        "hangingPiece"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": [
+        "mate"
+      ]
+    },
+    {
+      "position": 51,
+      "fen": "5r2/1p4Rk/p2p1B2/4pq2/5r2/8/PPP3QP/1K6 b - - 1 31",
+      "ground_truth": [
+        "mate",
+        "mateIn2",
+        "sacrifice"
+      ],
+      "predicted": [
+        "mate",
+        "sacrifice",
+        "mateIn2",
+        "fork",
+        "hangingPiece",
+        "pin",
+        "deflection",
+        "attraction",
+        "discoveredAttack",
+        "clearance"
+      ],
+      "common_detected": [
+        "sacrifice"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "fork",
+        "discoveredAttack",
+        "clearance",
+        "hangingPiece",
+        "deflection",
+        "attraction"
+      ],
+      "critical_detected": [
+        "mate",
+        "mateIn2"
+      ],
+      "critical_missed": [],
+      "critical_fp": []
+    },
+    {
+      "position": 52,
+      "fen": "r4rk1/p3bppp/1pp2n2/4p3/1P6/P3PPP1/1B1qNK1P/RQ3R2 b - - 1 17",
+      "ground_truth": [
+        "trappedPiece"
+      ],
+      "predicted": [
+        "trappedPiece",
+        "fork",
+        "discoveredAttack",
+        "hangingPiece",
+        "pin",
+        "sacrifice",
+        "clearance",
+        "attraction",
+        "deflection",
+        "skewer"
+      ],
+      "common_detected": [
+        "trappedPiece"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "skewer",
+        "fork",
+        "discoveredAttack",
+        "clearance",
+        "hangingPiece",
+        "deflection",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": []
+    },
+    {
+      "position": 53,
+      "fen": "1q3rk1/1p3pp1/2p1p2p/3P1b2/1PP2n1P/5P2/3Q4/B4BRK b - - 0 28",
+      "ground_truth": [
+        "deflection",
+        "discoveredAttack",
+        "sacrifice"
+      ],
+      "predicted": [
+        "mate",
+        "fork",
+        "pin",
+        "mateIn1",
+        "discoveredAttack",
+        "sacrifice",
+        "hangingPiece",
+        "clearance",
+        "attraction",
+        "deflection"
+      ],
+      "common_detected": [
+        "discoveredAttack",
+        "deflection",
+        "sacrifice"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "fork",
+        "clearance",
+        "hangingPiece",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": [
+        "mate",
+        "mateIn1"
+      ]
+    },
+    {
+      "position": 54,
+      "fen": "5r1k/1b2p1bp/pq1pQnp1/1p1n4/2pP4/2P3P1/PP1N1PBP/R1B1R1K1 w - - 1 18",
+      "ground_truth": [
+        "trappedPiece"
+      ],
+      "predicted": [
+        "fork",
+        "discoveredAttack",
+        "sacrifice",
+        "pin",
+        "attraction",
+        "deflection",
+        "clearance",
+        "hangingPiece",
+        "skewer",
+        "trappedPiece"
+      ],
+      "common_detected": [
+        "trappedPiece"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "skewer",
+        "fork",
+        "discoveredAttack",
+        "clearance",
+        "deflection",
+        "hangingPiece",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": []
+    },
+    {
+      "position": 55,
+      "fen": "5Q2/6pk/p3p3/1p1pP3/3Pb1P1/P1P5/1P3R1K/1q6 w - - 3 55",
+      "ground_truth": [
+        "deflection"
+      ],
+      "predicted": [
+        "mate",
+        "mateIn2",
+        "deflection",
+        "fork",
+        "mateIn1",
+        "pin",
+        "sacrifice",
+        "hangingPiece",
+        "skewer",
+        "discoveredAttack"
+      ],
+      "common_detected": [
+        "deflection"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "skewer",
+        "fork",
+        "discoveredAttack",
+        "hangingPiece",
+        "sacrifice"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": [
+        "mate",
+        "mateIn2",
+        "mateIn1"
+      ]
+    },
+    {
+      "position": 56,
+      "fen": "r4r2/1pk4p/p1pNb1p1/2P1pp2/8/4P1P1/PP1R1P1P/2K4R b - - 0 19",
+      "ground_truth": [
+        "clearance"
+      ],
+      "predicted": [
+        "fork",
+        "hangingPiece",
+        "pin",
+        "discoveredAttack",
+        "sacrifice",
+        "deflection",
+        "trappedPiece",
+        "clearance",
+        "skewer",
+        "attraction"
+      ],
+      "common_detected": [
+        "clearance"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "skewer",
+        "trappedPiece",
+        "fork",
+        "discoveredAttack",
+        "hangingPiece",
+        "deflection",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": []
+    },
+    {
+      "position": 57,
+      "fen": "2k1r3/1pp2pq1/1pp5/5R2/5B1p/2P3Q1/PP2r1PP/R6K w - - 0 23",
+      "ground_truth": [
+        "backRankMate",
+        "mate",
+        "mateIn2"
+      ],
+      "predicted": [
+        "mate",
+        "fork",
+        "mateIn2",
+        "hangingPiece",
+        "deflection",
+        "pin",
+        "sacrifice",
+        "discoveredAttack",
+        "skewer",
+        "attraction"
+      ],
+      "common_detected": [],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "skewer",
+        "fork",
+        "discoveredAttack",
+        "hangingPiece",
+        "deflection",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [
+        "mate",
+        "mateIn2"
+      ],
+      "critical_missed": [
+        "backRankMate"
+      ],
+      "critical_fp": []
+    },
+    {
+      "position": 58,
+      "fen": "r7/6kp/pq3rpn/1p1Q1p2/8/P2B4/1PP3PP/R4R1K b - - 0 23",
+      "ground_truth": [
+        "hangingPiece"
+      ],
+      "predicted": [
+        "sacrifice",
+        "fork",
+        "pin",
+        "attraction",
+        "discoveredAttack",
+        "clearance",
+        "deflection",
+        "hangingPiece",
+        "skewer",
+        "trappedPiece"
+      ],
+      "common_detected": [
+        "hangingPiece"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "skewer",
+        "trappedPiece",
+        "fork",
+        "discoveredAttack",
+        "clearance",
+        "deflection",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": []
+    },
+    {
+      "position": 59,
+      "fen": "1r4k1/2n2p2/2P1p1p1/8/1r2P2P/2R2P2/8/B1R2K2 w - - 2 41",
+      "ground_truth": [
+        "clearance",
+        "fork"
+      ],
+      "predicted": [
+        "fork",
+        "pin",
+        "deflection",
+        "sacrifice",
+        "discoveredAttack",
+        "attraction",
+        "skewer",
+        "clearance",
+        "hangingPiece",
+        "trappedPiece"
+      ],
+      "common_detected": [
+        "clearance",
+        "fork"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "skewer",
+        "trappedPiece",
+        "discoveredAttack",
+        "deflection",
+        "hangingPiece",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": []
+    },
+    {
+      "position": 60,
+      "fen": "8/6pk/1p5p/2n5/R4K2/7P/6P1/8 w - - 1 38",
+      "ground_truth": [
+        "fork"
+      ],
+      "predicted": [
+        "fork",
+        "hangingPiece",
+        "deflection",
+        "sacrifice",
+        "discoveredAttack",
+        "pin",
+        "trappedPiece",
+        "promotion",
+        "clearance",
+        "skewer"
+      ],
+      "common_detected": [
+        "fork"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "promotion",
+        "skewer",
+        "trappedPiece",
+        "discoveredAttack",
+        "clearance",
+        "hangingPiece",
+        "deflection",
+        "sacrifice"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": []
+    },
+    {
+      "position": 61,
+      "fen": "8/6k1/6p1/R5Kp/p4PPP/2r5/8/8 b - - 0 46",
+      "ground_truth": [
+        "deflection"
+      ],
+      "predicted": [
+        "mate",
+        "deflection",
+        "fork",
+        "mateIn2",
+        "mateIn1",
+        "pin",
+        "sacrifice",
+        "hangingPiece",
+        "attraction",
+        "discoveredAttack"
+      ],
+      "common_detected": [
+        "deflection"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "fork",
+        "discoveredAttack",
+        "hangingPiece",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": [
+        "mate",
+        "mateIn2",
+        "mateIn1"
+      ]
+    },
+    {
+      "position": 62,
+      "fen": "3r2k1/2Qn3p/p5p1/3p2b1/1P6/4R2q/PB3P2/5RK1 b - - 1 31",
+      "ground_truth": [
+        "hangingPiece",
+        "skewer"
+      ],
+      "predicted": [
+        "fork",
+        "pin",
+        "mate",
+        "sacrifice",
+        "hangingPiece",
+        "discoveredAttack",
+        "deflection",
+        "attraction",
+        "clearance",
+        "skewer"
+      ],
+      "common_detected": [
+        "skewer",
+        "hangingPiece"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "fork",
+        "discoveredAttack",
+        "clearance",
+        "deflection",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": [
+        "mate"
+      ]
+    },
+    {
+      "position": 63,
+      "fen": "rr2k3/2p2PQ1/2n5/2n1p1p1/2Pp4/p2P4/P4PK1/8 b - - 0 39",
+      "ground_truth": [
+        "mate",
+        "mateIn1",
+        "promotion"
+      ],
+      "predicted": [
+        "fork",
+        "hangingPiece",
+        "pin",
+        "sacrifice",
+        "deflection",
+        "discoveredAttack",
+        "promotion",
+        "attraction",
+        "clearance",
+        "skewer"
+      ],
+      "common_detected": [
+        "promotion"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "skewer",
+        "fork",
+        "discoveredAttack",
+        "clearance",
+        "hangingPiece",
+        "deflection",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [
+        "mate",
+        "mateIn1"
+      ],
+      "critical_fp": []
+    },
+    {
+      "position": 64,
+      "fen": "3r1b1r/Q1pk1p2/3q1p2/1N4p1/2p5/7b/PP1P1PP1/R1B2RK1 b - - 1 17",
+      "ground_truth": [
+        "pin"
+      ],
+      "predicted": [
+        "mate",
+        "fork",
+        "pin",
+        "sacrifice",
+        "discoveredAttack",
+        "hangingPiece",
+        "attraction",
+        "clearance",
+        "deflection",
+        "trappedPiece"
+      ],
+      "common_detected": [
+        "pin"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "trappedPiece",
+        "fork",
+        "discoveredAttack",
+        "clearance",
+        "hangingPiece",
+        "deflection",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": [
+        "mate"
+      ]
+    },
+    {
+      "position": 65,
+      "fen": "2k5/p6p/1b1pPq2/1bpQ3p/2P5/5P2/P4P2/R4K2 b - - 0 32",
+      "ground_truth": [
+        "sacrifice",
+        "skewer"
+      ],
+      "predicted": [
+        "fork",
+        "promotion",
+        "pin",
+        "discoveredAttack",
+        "hangingPiece",
+        "sacrifice",
+        "deflection",
+        "clearance",
+        "attraction",
+        "skewer"
+      ],
+      "common_detected": [
+        "skewer",
+        "sacrifice"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "fork",
+        "discoveredAttack",
+        "clearance",
+        "hangingPiece",
+        "deflection",
+        "promotion",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": []
+    },
+    {
+      "position": 66,
+      "fen": "r1q1k2r/p3bpp1/1pp1p2p/3nNb2/3P1B2/1Q2P2P/PP3PP1/R3KB1R w KQkq - 0 13",
+      "ground_truth": [
+        "hangingPiece"
+      ],
+      "predicted": [
+        "fork",
+        "pin",
+        "sacrifice",
+        "discoveredAttack",
+        "deflection",
+        "attraction",
+        "skewer",
+        "clearance",
+        "trappedPiece",
+        "hangingPiece"
+      ],
+      "common_detected": [
+        "hangingPiece"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "skewer",
+        "trappedPiece",
+        "fork",
+        "discoveredAttack",
+        "clearance",
+        "deflection",
+        "sacrifice",
+        "attraction"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": []
+    },
+    {
+      "position": 67,
+      "fen": "8/2k5/p6p/1r1R3K/8/6P1/8/8 w - - 34 55",
+      "ground_truth": [
+        "promotion"
+      ],
+      "predicted": [
+        "fork",
+        "hangingPiece",
+        "deflection",
+        "pin",
+        "sacrifice",
+        "discoveredAttack",
+        "promotion",
+        "skewer",
+        "clearance",
+        "trappedPiece"
+      ],
+      "common_detected": [
+        "promotion"
+      ],
+      "common_missed": [],
+      "common_fp": [
+        "pin",
+        "skewer",
+        "trappedPiece",
+        "fork",
+        "discoveredAttack",
+        "clearance",
+        "hangingPiece",
+        "deflection",
+        "sacrifice"
+      ],
+      "critical_detected": [],
+      "critical_missed": [],
+      "critical_fp": []
+    }
+  ],
+  "metrics": {
+    "common_detection_rate": 0.9583333333333334,
+    "critical_detection_rate": 0.6304347826086957,
+    "overall_detection_rate": 0.8305084745762712,
+    "common_fp_rate": 0.8857615894039735,
+    "critical_fp_rate": 0.5606060606060606
+  }
+}

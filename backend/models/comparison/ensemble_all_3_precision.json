@@ -1,0 +1,96 @@
+{
+  "timestamp": "2025-11-20T20:12:28.762558",
+  "model_type": "ensemble_all_3_precision",
+  "num_models": 3,
+  "models": [
+    "CNN",
+    "ResNet",
+    "EfficientNet"
+  ],
+  "strategies": [
+    {
+      "name": "UNANIMOUS (AND)",
+      "precision": 0.8313253012048193,
+      "recall": 0.004130499850344208,
+      "f1": 0.008220157255182273,
+      "threshold": 0.6,
+      "description": "All 3 models must agree"
+    },
+    {
+      "name": "MAJORITY (>=2)",
+      "precision": 0.7931034482758621,
+      "recall": 0.03992816521999401,
+      "f1": 0.07602872449561153,
+      "threshold": 0.6,
+      "description": "At least 2 models agree"
+    },
+    {
+      "name": "ANY (OR)",
+      "precision": 0.7106194690265487,
+      "recall": 0.09613888057467825,
+      "f1": 0.16936461903506458,
+      "threshold": 0.6,
+      "description": "Any model predicts"
+    },
+    {
+      "name": "WEIGHTED",
+      "precision": 0.8062622309197651,
+      "recall": 0.02466327446872194,
+      "f1": 0.047862453531598514,
+      "threshold": 0.6,
+      "description": "Weighted by model precision"
+    },
+    {
+      "name": "ADAPTIVE (0.55)",
+      "precision": 0.7509433962264151,
+      "recall": 0.059563005088296914,
+      "f1": 0.11037160288408208,
+      "threshold": 0.55,
+      "description": "Lower threshold + majority"
+    },
+    {
+      "name": "BEST MODEL (EfficientNet)",
+      "precision": 0.7950819672131147,
+      "recall": 0.005806644717150554,
+      "f1": 0.01152909015273073,
+      "threshold": 0.6,
+      "description": "EfficientNet alone"
+    },
+    {
+      "name": "CNN (Individual)",
+      "precision": 0.7210718635809987,
+      "recall": 0.07087698293923975,
+      "f1": 0.12906742246688832,
+      "threshold": 0.6,
+      "description": "Individual model"
+    },
+    {
+      "name": "ResNet (Individual)",
+      "precision": 0.7471830985915493,
+      "recall": 0.06351391798862616,
+      "f1": 0.11707586206896552,
+      "threshold": 0.6,
+      "description": "Individual model"
+    },
+    {
+      "name": "EfficientNet (Individual)",
+      "precision": 0.7950819672131147,
+      "recall": 0.005806644717150554,
+      "f1": 0.01152909015273073,
+      "threshold": 0.6,
+      "description": "Individual model"
+    }
+  ],
+  "best_precision": {
+    "strategy": "UNANIMOUS (AND)",
+    "value": 0.8313253012048193
+  },
+  "best_recall": {
+    "strategy": "ANY (OR)",
+    "value": 0.09613888057467825
+  },
+  "best_f1": {
+    "strategy": "ANY (OR)",
+    "value": 0.16936461903506458
+  }
+}

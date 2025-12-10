@@ -16,6 +16,7 @@ from app.core.config import settings
 from app.services.chess_engine import ChessEngineService
 from app.services.explanation_engine import ExplanationEngine
 from app.services.ml_service import MLService
+from app.services.tactical_analysis import get_tactical_service
 from app.models.chess_models import (
     AnalysisRequest, AnalysisResponse, MoveExplanationRequest, 
     HealthResponse, ErrorResponse
@@ -48,6 +49,7 @@ app.add_middleware(
 chess_engine = ChessEngineService()
 explanation_engine = ExplanationEngine()
 ml_service = MLService()
+tactical_service = get_tactical_service()
 
 # Models are now imported from chess_models.py
 
@@ -111,12 +113,16 @@ async def analyze_position(request: AnalysisRequest):
         # Get ML insights (await the async function)
         ml_insights = await ml_service.get_position_insights(request.fen)
         
+        # Get tactical themes from hybrid ensemble
+        tactical_themes = await tactical_service.analyze_tactics(board, top_k=5)
+        
         response = AnalysisResponse(
             fen=request.fen,
             best_moves=engine_result["best_moves"],
             explanations=explanations,
             position_evaluation=engine_result["evaluation"],
             learning_insights=ml_insights,
+            tactical_themes=tactical_themes.get('themes', []),
             analysis_time=None  # Could add timing if needed
         )
         
@@ -147,6 +153,33 @@ async def explain_move(request: MoveExplanationRequest):
     except Exception as e:
         logger.error(f"Move explanation error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/tactical-themes")
+async def get_tactical_themes(fen: str):
+    """
+    Get tactical themes for a position using hybrid ensemble
+    (Recall models for common tactics + Precision models for critical themes)
+    """
+    try:
+        # Validate FEN
+        try:
+            board = chess.Board(fen)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid FEN string")
+        
+        # Get tactical themes from hybrid ensemble
+        tactical_analysis = await tactical_service.analyze_tactics(board, top_k=5)
+        
+        return {
+            "fen": fen,
+            "tactical_themes": tactical_analysis.get('themes', []),
+            "available": tactical_analysis.get('available', False),
+            "message": tactical_analysis.get('message', '')
+        }
+        
+    except Exception as e:
+        logger.error(f"Tactical analysis error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Tactical analysis failed: {str(e)}")
 
 # Include API router
 app.include_router(api_router, prefix="/api/v1")

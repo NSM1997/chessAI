@@ -1,0 +1,406 @@
+{
+  "timestamp": "2025-11-17T10:58:54.278085",
+  "model_type": "recall_optimized",
+  "test_dataset_size": 15001,
+  "num_themes": 20,
+  "theme_names": [
+    "fork",
+    "pin",
+    "skewer",
+    "discoveredAttack",
+    "doubleAttack",
+    "mate",
+    "mateIn1",
+    "mateIn2",
+    "attraction",
+    "deflection",
+    "interference",
+    "clearance",
+    "sacrifice",
+    "backRankMate",
+    "hangingPiece",
+    "trappedPiece",
+    "enPassant",
+    "promotion",
+    "underPromotion",
+    "xRayAttack"
+  ],
+  "detection_threshold": 0.3,
+  "models": [
+    {
+      "model": "CNN",
+      "parameters": 1038164,
+      "detection_threshold": 0.3,
+      "test_recall": 0.665788686022149,
+      "test_precision": 0.20188781993102198,
+      "test_f1": 0.30982658959537573,
+      "avg_per_theme_recall": 0.35428099697209686,
+      "detected_themes_count": 13,
+      "per_theme_metrics": {
+        "fork": {
+          "precision": 0.14924691921497032,
+          "recall": 0.8591697320021019,
+          "f1": 0.2543163789080728,
+          "support": 1903
+        },
+        "pin": {
+          "precision": 0.09756779424098407,
+          "recall": 0.3826754385964912,
+          "f1": 0.15549120071285363,
+          "support": 912
+        },
+        "skewer": {
+          "precision": 0.10919540229885058,
+          "recall": 0.17981072555205047,
+          "f1": 0.13587604290822408,
+          "support": 317
+        },
+        "discoveredAttack": {
+          "precision": 0.10532030401737243,
+          "recall": 0.36928934010152287,
+          "f1": 0.1638974936637567,
+          "support": 788
+        },
+        "mate": {
+          "precision": 0.3670503234478703,
+          "recall": 0.9589552238805971,
+          "f1": 0.5308949510905887,
+          "support": 4556
+        },
+        "mateIn1": {
+          "precision": 0.200347021399653,
+          "recall": 0.8204642349597348,
+          "f1": 0.32205280773521755,
+          "support": 2111
+        },
+        "mateIn2": {
+          "precision": 0.19691939981410173,
+          "recall": 0.7854872881355932,
+          "f1": 0.3148954241426903,
+          "support": 1888
+        },
+        "attraction": {
+          "precision": 0.08968609865470852,
+          "recall": 0.2127659574468085,
+          "f1": 0.12618296529968454,
+          "support": 564
+        },
+        "deflection": {
+          "precision": 0.07447577729573392,
+          "recall": 0.15846153846153846,
+          "f1": 0.10132808657156911,
+          "support": 650
+        },
+        "interference": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 63
+        },
+        "clearance": {
+          "precision": 0.021052631578947368,
+          "recall": 0.019417475728155338,
+          "f1": 0.020202020202020204,
+          "support": 206
+        },
+        "sacrifice": {
+          "precision": 0.14116985376827895,
+          "recall": 0.44821428571428573,
+          "f1": 0.21471343028229256,
+          "support": 1120
+        },
+        "backRankMate": {
+          "precision": 0.37841726618705035,
+          "recall": 0.513671875,
+          "f1": 0.43579121789560893,
+          "support": 512
+        },
+        "hangingPiece": {
+          "precision": 0.04059040590405904,
+          "recall": 0.08576998050682261,
+          "f1": 0.055103318722604884,
+          "support": 513
+        },
+        "trappedPiece": {
+          "precision": 0.09,
+          "recall": 0.10714285714285714,
+          "f1": 0.09782608695652174,
+          "support": 168
+        },
+        "enPassant": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 24
+        },
+        "promotion": {
+          "precision": 0.2227204783258595,
+          "recall": 0.40599455040871935,
+          "f1": 0.2876447876447876,
+          "support": 367
+        },
+        "xRayAttack": {
+          "precision": 0.041666666666666664,
+          "recall": 0.06976744186046512,
+          "f1": 0.05217391304347826,
+          "support": 43
+        }
+      },
+      "epochs_trained": 16,
+      "training_date": "2025-11-17T01:50:02.511107",
+      "optimization_target": "recall",
+      "techniques": "focal_loss + pos_weights + low_threshold",
+      "color": "#3b82f6"
+    },
+    {
+      "model": "ResNet",
+      "parameters": 2815764,
+      "detection_threshold": 0.3,
+      "test_recall": 0.5160730320263395,
+      "test_precision": 0.23871628731239963,
+      "test_f1": 0.32643556296029835,
+      "avg_per_theme_recall": 0.2566870113990413,
+      "detected_themes_count": 9,
+      "per_theme_metrics": {
+        "fork": {
+          "precision": 0.16579236305965597,
+          "recall": 0.7141355754072517,
+          "f1": 0.2691089108910891,
+          "support": 1903
+        },
+        "pin": {
+          "precision": 0.09519832985386222,
+          "recall": 0.25,
+          "f1": 0.13788932567281523,
+          "support": 912
+        },
+        "skewer": {
+          "precision": 0.13777777777777778,
+          "recall": 0.09779179810725552,
+          "f1": 0.11439114391143912,
+          "support": 317
+        },
+        "discoveredAttack": {
+          "precision": 0.14387031408308004,
+          "recall": 0.1802030456852792,
+          "f1": 0.16,
+          "support": 788
+        },
+        "mate": {
+          "precision": 0.4355983162958509,
+          "recall": 0.7949956101843723,
+          "f1": 0.5628156320410225,
+          "support": 4556
+        },
+        "mateIn1": {
+          "precision": 0.2550742833228709,
+          "recall": 0.5774514448128849,
+          "f1": 0.35384615384615387,
+          "support": 2111
+        },
+        "mateIn2": {
+          "precision": 0.20003180155827635,
+          "recall": 0.6663135593220338,
+          "f1": 0.3076923076923077,
+          "support": 1888
+        },
+        "attraction": {
+          "precision": 0.11926605504587157,
+          "recall": 0.06914893617021277,
+          "f1": 0.08754208754208755,
+          "support": 564
+        },
+        "deflection": {
+          "precision": 0.05822416302765648,
+          "recall": 0.06153846153846154,
+          "f1": 0.05983545250560957,
+          "support": 650
+        },
+        "interference": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 63
+        },
+        "clearance": {
+          "precision": 0.03804347826086957,
+          "recall": 0.03398058252427184,
+          "f1": 0.035897435897435895,
+          "support": 206
+        },
+        "sacrifice": {
+          "precision": 0.14034296028880866,
+          "recall": 0.27767857142857144,
+          "f1": 0.18645083932853718,
+          "support": 1120
+        },
+        "backRankMate": {
+          "precision": 0.45134575569358176,
+          "recall": 0.42578125,
+          "f1": 0.4381909547738693,
+          "support": 512
+        },
+        "hangingPiece": {
+          "precision": 0.080078125,
+          "recall": 0.07992202729044834,
+          "f1": 0.08,
+          "support": 513
+        },
+        "trappedPiece": {
+          "precision": 0.07,
+          "recall": 0.041666666666666664,
+          "f1": 0.05223880597014925,
+          "support": 168
+        },
+        "enPassant": {
+          "precision": 0.05555555555555555,
+          "recall": 0.041666666666666664,
+          "f1": 0.047619047619047616,
+          "support": 24
+        },
+        "promotion": {
+          "precision": 0.2926829268292683,
+          "recall": 0.2615803814713896,
+          "f1": 0.2762589928057554,
+          "support": 367
+        },
+        "xRayAttack": {
+          "precision": 0.06666666666666667,
+          "recall": 0.046511627906976744,
+          "f1": 0.0547945205479452,
+          "support": 43
+        }
+      },
+      "epochs_trained": 24,
+      "training_date": "2025-11-17T03:34:13.864770",
+      "optimization_target": "recall",
+      "techniques": "focal_loss + pos_weights + low_threshold",
+      "color": "#10b981"
+    },
+    {
+      "model": "Transformer",
+      "parameters": 841364,
+      "detection_threshold": 0.3,
+      "test_recall": 0.6532175995211015,
+      "test_precision": 0.21049788769073477,
+      "test_f1": 0.3183940242763772,
+      "avg_per_theme_recall": 0.3195541361804801,
+      "detected_themes_count": 8,
+      "per_theme_metrics": {
+        "fork": {
+          "precision": 0.14491298527443106,
+          "recall": 0.9101418812401472,
+          "f1": 0.25001804402742694,
+          "support": 1903
+        },
+        "pin": {
+          "precision": 0.1270358306188925,
+          "recall": 0.08552631578947369,
+          "f1": 0.10222804718217562,
+          "support": 912
+        },
+        "skewer": {
+          "precision": 0.10619469026548672,
+          "recall": 0.22712933753943218,
+          "f1": 0.14472361809045226,
+          "support": 317
+        },
+        "discoveredAttack": {
+          "precision": 0.1233644859813084,
+          "recall": 0.08375634517766498,
+          "f1": 0.09977324263038549,
+          "support": 788
+        },
+        "mate": {
+          "precision": 0.33936138014527845,
+          "recall": 0.9844161545215101,
+          "f1": 0.5047265361242403,
+          "support": 4556
+        },
+        "mateIn1": {
+          "precision": 0.1794358871774355,
+          "recall": 0.8498342018000947,
+          "f1": 0.29630853084482617,
+          "support": 2111
+        },
+        "mateIn2": {
+          "precision": 0.18628037830719502,
+          "recall": 0.8241525423728814,
+          "f1": 0.3038765745532663,
+          "support": 1888
+        },
+        "attraction": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 564
+        },
+        "deflection": {
+          "precision": 0.08333333333333333,
+          "recall": 0.0015384615384615385,
+          "f1": 0.0030211480362537764,
+          "support": 650
+        },
+        "interference": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 63
+        },
+        "clearance": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 206
+        },
+        "sacrifice": {
+          "precision": 0.1408906882591093,
+          "recall": 0.4660714285714286,
+          "f1": 0.21637305699481865,
+          "support": 1120
+        },
+        "backRankMate": {
+          "precision": 0.22337662337662337,
+          "recall": 0.83984375,
+          "f1": 0.3528929011079196,
+          "support": 512
+        },
+        "hangingPiece": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 513
+        },
+        "trappedPiece": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 168
+        },
+        "enPassant": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 24
+        },
+        "promotion": {
+          "precision": 0.20952380952380953,
+          "recall": 0.47956403269754766,
+          "f1": 0.2916321458160729,
+          "support": 367
+        },
+        "xRayAttack": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 43
+        }
+      },
+      "epochs_trained": 31,
+      "training_date": "2025-11-17T10:54:00.474246",
+      "optimization_target": "recall",
+      "techniques": "focal_loss + pos_weights + low_threshold",
+      "color": "#f59e0b"
+    }
+  ]
+}

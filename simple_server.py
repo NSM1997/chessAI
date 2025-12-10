@@ -50,7 +50,7 @@ async def startup_event():
         print(f"[ERROR] Failed to initialize chess engine: {e}")
         chess_engine_service = None
     
-    # Initialize tactical ML classifier (Phase 2)
+    # Initialize tactical ML classifier
     try:
         from app.services.tactical_analysis import TacticalAnalysisService
         
@@ -64,7 +64,7 @@ async def startup_event():
         print(f"[ERROR] Failed to initialize tactical classifier: {e}")
         tactical_analysis_service = None
     
-    # Initialize Board Analyzer (Phase 3: Path B)
+    # Initialize Board Analyzer
     try:
         from app.services.board_analyzer import BoardAnalyzer
         
@@ -84,7 +84,7 @@ async def startup_event():
         print(f"[ERROR] Failed to initialize move comparator: {e}")
         move_comparator = None
     
-    # Initialize LLM Explanation Service (Phase 3: Path B)
+    # Initialize LLM Explanation Service
     # Smart provider selection: OpenAI → Ollama → Fallback
     try:
         from app.services.llm_explanation import LLMExplanationService
@@ -184,9 +184,6 @@ def detect_opening(fen: str, pv_moves: list) -> dict:
         moves = []
         temp_board = chess.Board()
         
-        # Try to reconstruct game from starting position
-        # This is a simplified approach - for full opening detection,
-        # you'd need an opening book database
         
         # Common opening patterns based on piece positions and moves
         pieces_str = fen.split()[0]
@@ -348,7 +345,6 @@ async def analyze_position(request: dict):
                 position_type = "endgame"
             elif move_number > 25:
                 position_type = "middlegame"
-            # Don't force opening for early moves - let piece analysis decide
                     
         except Exception:
             # Fallback to move number analysis
@@ -380,7 +376,7 @@ async def analyze_position(request: dict):
             except Exception as e:
                 stockfish_analysis = None
         
-        # Use ML Tactical Classifier for enhanced tactical detection (Phase 2)
+        # Use ML Tactical Classifier for enhanced tactical detection
         ml_tactical_themes = []
         if tactical_analysis_service and tactical_analysis_service.is_available:
             try:
@@ -410,7 +406,7 @@ async def analyze_position(request: dict):
             san_move = best_move_info['san']
             score_value = best_move_info['score']['value']
             
-            # Generate intelligent explanation using Board Analyzer + LLM (Phase 3: Path B)
+            # Generate intelligent explanation using Board Analyzer + LLM
             try:
                 if board_analyzer and llm_explanation_service:
                     # Step 1: Analyze board position
@@ -434,7 +430,9 @@ async def analyze_position(request: dict):
                     
                     print(f"[INFO] Generated intelligent explanation for {san_move}")
                 else:
-                    explanation = f"It's {turn}'s turn. The best move is {san_move} (evaluation: {score_value/100:+.2f})."
+                    # Simple fallback without exposing numeric engine score
+                    adv = "a strong" if abs(score_value) > 150 else "a slight"
+                    explanation = f"It's {turn}'s turn. The best move is {san_move}, giving {adv} advantage."
             except Exception as e:
                 print(f"[WARNING] Explanation generation failed: {e}, using simple fallback")
                 explanation = f"It's {turn}'s turn. The best move is {san_move} (evaluation: {score_value/100:+.2f})."
@@ -462,12 +460,12 @@ async def analyze_position(request: dict):
                 explanation = f"It's {turn}'s turn. The move {san_move} is a legal option in this {position_type}. (Engine unavailable - showing legal move)"
         
         # Generate tactical motifs and strategic concepts
-        tactical_motifs = []
-        strategic_concepts = []
+        tactical_motifs: list[str] = []
+        strategic_concepts: list[str] = []
         
         # Use Stockfish analysis if available
         if stockfish_analysis and stockfish_analysis.get('tactical_motifs'):
-            tactical_motifs = stockfish_analysis['tactical_motifs']
+            tactical_motifs = list(stockfish_analysis['tactical_motifs'])
         else:
             # Fallback tactical detection
             if board.is_check():
@@ -475,12 +473,16 @@ async def analyze_position(request: dict):
             if material_balance != 0:
                 tactical_motifs.append("material_advantage")
         
-        # Add ML-detected tactical themes to motifs
+        # Add ML-detected tactical themes to motifs (ensemble-based, already sorted by confidence)
         if ml_tactical_themes:
             for theme_info in ml_tactical_themes:
                 theme_name = theme_info['theme']
                 if theme_name not in tactical_motifs:
                     tactical_motifs.append(theme_name)
+        
+        # Limit motifs we expose in the API/extension UI to the top 2 for clarity
+        if len(tactical_motifs) > 2:
+            tactical_motifs = tactical_motifs[:2]
         
         # Strategic concepts based on position
         if position_type == "opening":
@@ -747,14 +749,43 @@ async def analyze_move(request: dict):
                 # Generate comparative explanation using LLM
                 from app.services.llm_explanation import LLMExplanationService
                 
-                # Create a concise prompt for faster generation
-                prompt = f"""Chess move analysis:
-User: {user_move_san} ({user_eval_score.get('display', '0.00')})
-Best: {best_move_san} ({best_move_data['score'].get('display', '0.00')})
-Quality: {quality} (-{cp_loss}cp)
+                # Build piece map to prevent hallucinations
+                piece_map_str = ""
+                piece_symbols = {chess.PAWN: 'pawn', chess.KNIGHT: 'knight', 
+                                chess.BISHOP: 'bishop', chess.ROOK: 'rook',
+                                chess.QUEEN: 'queen', chess.KING: 'king'}
+                
+                # List all pieces on the board for verification
+                board_pieces = []
+                for square, piece in board_before.piece_map().items():
+                    square_name = chess.square_name(square)
+                    piece_name = piece_symbols.get(piece.piece_type, 'piece')
+                    color = 'White' if piece.color == chess.WHITE else 'Black'
+                    board_pieces.append(f"{color} {piece_name} on {square_name}")
+                
+                piece_map_str = "\n".join(board_pieces)
+                
+                # Create a grounded prompt that avoids numeric evals and
+                # discourages hallucinating non-existent pieces/squares.
+                prompt = f"""You are a chess coach comparing two moves in the same position.
 
-Explain in 2-3 sentences:
-{comparison['quality_display']['emoji']} Why is {best_move_san} better than {user_move_san}?"""
+Position (FEN): {fen_before}
+
+Pieces on the board:
+{piece_map_str}
+
+User move: {user_move_san}
+Engine best move: {best_move_san}
+Quality label for the user's move: {quality}.
+
+Explain in 2–3 sentences why the engine's move is better from a chess point of view.
+Focus on general ideas such as king safety, material, piece activity, development,
+and tactical threats (e.g. forks, pins, back-rank mate, etc.).
+Do NOT mention numeric evaluation scores or centipawn values.
+IMPORTANT: Only mention pieces and squares that are explicitly listed above in the piece map.
+If you're unsure about specific tactical details, keep the explanation more general.
+
+{comparison['quality_display']['emoji']} Give a concise, instructive explanation suitable for a club-level player."""
 
                 explanation = await llm_explanation_service.generate_raw_explanation(prompt)
                 

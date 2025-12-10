@@ -17,7 +17,12 @@ logger = logging.getLogger(__name__)
 try:
     sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
     from app.ml.data_preprocessing import ChessBoardEncoder
-    from app.ml.tactical_classifier_pytorch import TacticalClassifierService
+    from app.ml.tactical_classifier_pytorch import (
+        TacticalClassifierService, 
+        EnsembleTacticalClassifierService,
+        PrecisionEnsembleService,
+        HybridTacticalEnsemble
+    )
     ML_AVAILABLE = True
 except ImportError as e:
     logger.warning(f"ML components not available: {e}")
@@ -58,24 +63,39 @@ class TacticalAnalysisService:
             self.is_available = False
             return
         
-        # Load classifier if model exists
-        if Path(model_path).exists():
-            try:
-                # PyTorch version loads theme_names.json automatically
-                self.classifier = TacticalClassifierService(model_path)
-                logger.info(f"Tactical classifier loaded from {model_path}")
-            except Exception as e:
-                logger.warning(f"Could not load tactical classifier: {e}")
-                logger.info("Run training script to create model: python scripts/train_tactical_classifier.py")
+        # Try hybrid ensemble first (recall for common tactics + precision for critical themes)
+        try:
+            self.classifier = HybridTacticalEnsemble()
+            if self.classifier.is_available:
+                logger.info("Hybrid tactical ensemble initialised (Recall for common tactics, Precision for critical themes)")
+            else:
                 self.classifier = None
-        else:
-            logger.info(f"No trained model found at {model_path}")
-            logger.info("Tactical classification disabled. Train model with: python scripts/train_tactical_classifier.py")
+        except Exception as e:
+            logger.warning(f"Could not initialise hybrid tactical ensemble: {e}")
             self.classifier = None
+        
+        # If ensemble is not available, fall back to single CNN model if present
+        if self.classifier is None:
+            if Path(model_path).exists():
+                try:
+                    # PyTorch version loads theme_names.json/checkpoint metadata automatically
+                    self.classifier = TacticalClassifierService(model_path)
+                    if self.classifier.is_available:
+                        logger.info(f"Single-model tactical classifier loaded from {model_path}")
+                    else:
+                        self.classifier = None
+                except Exception as e:
+                    logger.warning(f"Could not load tactical classifier: {e}")
+                    logger.info("Run training script to create model: python scripts/train_tactical_classifier.py")
+                    self.classifier = None
+            else:
+                logger.info(f"No trained model found at {model_path}")
+                logger.info("Tactical classification disabled. Train model with: python scripts/train_tactical_classifier.py")
+                self.classifier = None
     
     async def analyze_tactics(self, 
                               board: chess.Board,
-                              threshold: float = 0.4,
+                              threshold: float = None,
                               top_k: int = 5) -> Dict[str, Any]:
         """
         Analyze tactical patterns in a position
@@ -100,10 +120,16 @@ class TacticalAnalysisService:
             board_tensor = self.board_encoder.encode_board(board)
             
             # Classify tactical themes using PyTorch model
-            themes = self.classifier.predict(
-                board_tensor,
-                threshold=threshold
-            )
+            # Note: HybridTacticalEnsemble doesn't use threshold param (uses internal thresholds)
+            if hasattr(self.classifier, 'predict') and 'top_k' in self.classifier.predict.__code__.co_varnames:
+                # HybridTacticalEnsemble
+                themes = self.classifier.predict(board_tensor, top_k=top_k)
+            else:
+                # Legacy classifiers
+                themes = self.classifier.predict(
+                    board_tensor,
+                    threshold=threshold if threshold else 0.3
+                )
             
             # Limit to top_k themes
             if len(themes) > top_k:

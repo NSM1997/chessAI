@@ -809,6 +809,13 @@ fork, pin, skewer, discoveredAttack, doubleAttack, hangingPiece, trappedPiece, s
 **Critical Themes (4):**
 mate, mateIn1, mateIn2, backRankMate
 
+## Important - How to use Analyze Move Feature in the extension
+
+- First click on **Analyze Move** button on the extension overlay.
+- Then Make the move which you intended to do.
+- Then open extension and wait for 5 seconds, you can see the dispay showing **Analyzing your move**
+- Then the feedback will appear there itself within 5 secs.
+
 ## 🙏 Acknowledgments
 
 - **[Stockfish](https://stockfishchess.org/)** - World's strongest open-source chess engine
